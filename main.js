@@ -12,7 +12,7 @@ let isQuitting = false
 // ─── Backend ────────────────────────────────────────────────────────────────
 function startBackend() {
   const exe = app.isPackaged
-    ? path.join(process.resourcesPath, 'wwm-service.exe')
+    ? path.join(process.resourcesPath, 'backend.exe')
     : null
   const cmd  = (exe && fs.existsSync(exe)) ? exe : 'python'
   const args = (exe && fs.existsSync(exe)) ? [] : [path.join(__dirname, 'backend.py')]
