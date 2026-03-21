@@ -1,0 +1,67 @@
+{
+  "name": "wwm-monitor",
+  "version": "1.0.0",
+  "description": "WWM Ping Monitor",
+  "author": "Onyx Digital",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build-python": "pyinstaller backend.spec --onefile --noconsole --distpath ./dist-python/",
+    "build-all": "npm run build-python && electron-builder --win --x64",
+    "build": "electron-builder --win --x64"
+  },
+  "build": {
+    "appId": "com.onyx.wwm-monitor",
+    "productName": "WWM Monitor",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "WWM Monitor"
+    },
+    "extraResources": [
+      {
+        "from": "dist-python/backend.exe",
+        "to": "wwm-service.exe"
+      },
+      {
+        "from": "assets/",
+        "to": "assets/"
+      }
+    ],
+    "files": [
+      "main.js",
+      "preload.js",
+      "src/**/*",
+      "assets/**/*"
+    ],
+    "portable": {
+      "artifactName": "WWM.Monitor.Portable.exe"
+    }
+  },
+  "devDependencies": {
+    "electron": "^30.0.0",
+    "electron-builder": "^24.0.0"
+  }
+}
