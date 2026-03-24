@@ -10,7 +10,7 @@ let overlay = null
 let useTray = true
 let isQuitting = false
 
-// ─── Settings ────────────────────────────────────────────────────────────
+// ─── Settings ─────────────────────────────────────────────────────────────────
 const SETTINGS_DEFAULTS = { startup: false, tray: true, notify: true, spikeMs: 150, lossPct: 5 }
 
 function getSettingsPath() {
@@ -34,7 +34,7 @@ function saveSettings(cfg) {
   }
 }
 
-// ─── Backend ────────────────────────────────────────────────────────────────
+// ─── Backend ────────────────────────────────────────────────────────────────────
 function startBackend() {
   const exe = app.isPackaged
     ? path.join(process.resourcesPath, 'backend.exe')
@@ -50,7 +50,7 @@ function startBackend() {
   backend.on('close',  code => console.log('[backend] exited', code))
 }
 
-// ─── Kill backend ────────────────────────────────────────────────────────────
+// ─── Kill backend ──────────────────────────────────────────────────────────────────
 function killBackend() {
   if (!backend) return
   try {
@@ -63,7 +63,7 @@ function killBackend() {
   backend = null
 }
 
-// ─── Overlay ─────────────────────────────────────────────────────────────────
+// ─── Overlay ─────────────────────────────────────────────────────────────────────
 function createOverlay() {
   if (overlay && !overlay.isDestroyed()) {
     overlay.show()
@@ -98,7 +98,7 @@ function closeOverlay() {
   }
 }
 
-// ─── Shape ──────────────────────────────────────────────────────────────────
+// ─── Shape ──────────────────────────────────────────────────────────────────────────
 function buildRoundedShape(w, h, r) {
   const rects = [
     { x: r, y: 0, width: w - 2*r, height: h },
@@ -122,13 +122,15 @@ function buildRoundedShape(w, h, r) {
 
 function applyRoundedShape() {
   if (!win) return
+  // Skip shape masking when maximized (fills full screen, no rounding needed)
+  if (win.isMaximized()) return
   try {
     const [w, h] = win.getSize()
     win.setShape(buildRoundedShape(w, h, 14))
   } catch(e) {}
 }
 
-// ─── Tray ────────────────────────────────────────────────────────────────────
+// ─── Tray ────────────────────────────────────────────────────────────────────────────
 function getTrayIcon() {
   const base = app.isPackaged ? process.resourcesPath : __dirname
   const candidates = [
@@ -201,7 +203,7 @@ function createTray() {
   }
 }
 
-// ─── Window ──────────────────────────────────────────────────────────────────
+// ─── Window ──────────────────────────────────────────────────────────────────────────
 function createWindow() {
   const iconPath = path.join(app.isPackaged ? process.resourcesPath : __dirname, 'assets', 'icon.png')
   win = new BrowserWindow({
@@ -228,11 +230,12 @@ function createWindow() {
     const cfg = loadSettings()
     useTray = cfg.tray !== false
     createTray()
-    applyRoundedShape()
     win.show()
+    win.maximize()
   })
 
   win.on('resize', applyRoundedShape)
+  win.on('unmaximize', applyRoundedShape)
 
   win.on('close', (e) => {
     if (isQuitting) return
@@ -243,7 +246,7 @@ function createWindow() {
   })
 }
 
-// ─── App lifecycle ────────────────────────────────────────────────────────────
+// ─── App lifecycle ────────────────────────────────────────────────────────────────
 app.whenReady().then(() => {
   startBackend()
   setTimeout(createWindow, 1800)
@@ -259,7 +262,7 @@ app.on('window-all-closed', () => {
   app.quit()
 })
 
-// ─── IPC ─────────────────────────────────────────────────────────────────────
+// ─── IPC ──────────────────────────────────────────────────────────────────────────────
 ipcMain.on('minimize', () => { if (win) win.minimize() })
 
 ipcMain.on('close', () => {
