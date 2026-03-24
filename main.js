@@ -72,6 +72,7 @@ function applyRoundedShape() {
 function getTrayIcon() {
   const base = app.isPackaged ? process.resourcesPath : __dirname
   const candidates = [
+    path.join(base, 'assets', 'tray_icon.png'),
     path.join(base, 'assets', 'icon.png'),
     path.join(base, 'assets', 'icon.ico'),
   ]
@@ -94,15 +95,12 @@ function getTrayIcon() {
       console.warn('[tray] not found:', p)
     }
   }
-  // Fallback: generate a simple white 16x16 icon
+  // Fallback: white 16x16
   console.warn('[tray] using generated fallback icon')
   const size = 16
   const buf = Buffer.alloc(size * size * 4)
   for (let i = 0; i < size * size; i++) {
-    buf[i * 4 + 0] = 255
-    buf[i * 4 + 1] = 255
-    buf[i * 4 + 2] = 255
-    buf[i * 4 + 3] = 255
+    buf[i*4+0]=255; buf[i*4+1]=255; buf[i*4+2]=255; buf[i*4+3]=255
   }
   return nativeImage.createFromBuffer(buf, { width: size, height: size })
 }
