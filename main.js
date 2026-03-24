@@ -16,13 +16,13 @@ try {
   autoUpdater = require('electron-updater').autoUpdater
   autoUpdater.autoDownload = true
   autoUpdater.autoInstallOnAppQuit = true
-  autoUpdater.logger = null // disable noisy logs, handle events manually
+  autoUpdater.logger = null
 } catch(e) {
   console.warn('[updater] electron-updater not available:', e.message)
 }
 
 function initUpdater() {
-  if (!autoUpdater || !app.isPackaged) return
+  if (!autoUpdater) return
 
   autoUpdater.on('checking-for-update', () => {
     sendUpdateStatus({ type: 'checking' })
@@ -53,12 +53,14 @@ function initUpdater() {
     sendUpdateStatus({ type: 'error', message: err.message })
   })
 
-  // Check after 4 seconds so the app has time to fully load
-  setTimeout(() => {
-    autoUpdater.checkForUpdates().catch(e =>
-      console.warn('[updater] check failed:', e.message)
-    )
-  }, 4000)
+  // Auto-check on startup only in packaged builds
+  if (app.isPackaged) {
+    setTimeout(() => {
+      autoUpdater.checkForUpdates().catch(e =>
+        console.warn('[updater] auto-check failed:', e.message)
+      )
+    }, 4000)
+  }
 }
 
 function sendUpdateStatus(data) {
@@ -287,6 +289,7 @@ function createWindow() {
     useTray = cfg.tray !== false
     createTray()
     win.show()
+    win.maximize()
     initUpdater()
   })
 
@@ -375,9 +378,18 @@ ipcMain.on('update-install-now', () => {
 })
 
 ipcMain.on('update-check-manual', () => {
-  if (autoUpdater && app.isPackaged) {
-    autoUpdater.checkForUpdates().catch(e =>
-      console.warn('[updater] manual check failed:', e.message)
-    )
+  if (!autoUpdater) {
+    sendUpdateStatus({ type: 'error', message: 'Updater nicht verfügbar' })
+    return
   }
+  if (!app.isPackaged) {
+    // Dev-Mode: kein echtes Update möglich, aber UI-Feedback geben
+    sendUpdateStatus({ type: 'checking' })
+    setTimeout(() => sendUpdateStatus({ type: 'not-available' }), 1200)
+    return
+  }
+  autoUpdater.checkForUpdates().catch(e => {
+    console.warn('[updater] manual check failed:', e.message)
+    sendUpdateStatus({ type: 'error', message: e.message })
+  })
 })
