@@ -144,7 +144,7 @@ def find_server_ip(pid):
 def get_router_ip():
     try:
         out=subprocess.check_output(['ipconfig'],creationflags=0x08000000).decode('cp850',errors='ignore')
-        m=re.search(r'(?:Standard-Gateway|Default Gateway)[^\d]+([\d.]+)',out)
+        m=re.search(r'(?:Standardgateway|Standard-Gateway|Default Gateway)[^\d]*([\d.]+)',out)
         if m and m.group(1)!='0.0.0.0':return m.group(1)
     except:pass
     return None

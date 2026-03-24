@@ -760,7 +760,9 @@ function clampView(W,H){
 }
 
 function initMapInteraction(){
-  const canvas=getCanvas();if(!canvas)return;
+  const canvas=getCanvas();if(!canvas)return;  if(canvas.dataset.init)return;
+  canvas.dataset.init='1';
+
   canvas.addEventListener('wheel',(e)=>{
     e.preventDefault();
     if(zoomAnim){cancelAnimationFrame(zoomAnim);zoomAnim=null;}
@@ -862,6 +864,7 @@ function updateDash(rows,stats){
     document.getElementById('d-loss').textContent=loss+'%';
     document.getElementById('d-jitter').textContent=stats.avg?Math.round(stats.avg):'—';
     document.getElementById('d-sessions').textContent=stats.sessions||'—';
+    document.getElementById('d-spikes').textContent=stats.timeouts||0;
   }
   const tbody=document.getElementById('sess-tbody');
   tbody.innerHTML='';
