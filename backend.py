@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # pip install websockets psutil requests
 import asyncio, websockets, json, threading, time, sqlite3, re, subprocess, requests, psutil
 from datetime import datetime
@@ -7,7 +6,7 @@ from collections import deque
 WARN_MS=80; CRIT_MS=150; INTERVAL=2; SPIKE_THRESH=10; HISTORY=50
 DB_FILE="wwm_ping.db"
 LOG_FILE=f"ping_wwm_{datetime.now().strftime('%Y%m%d')}.log"
-GAME_EXES=["wwm.exe","wherewsindsmeet.exe","wherewındsmeet-win64-shipping.exe"]
+GAME_EXES=["wwm.exe","wherewsindsmeet.exe","where winds meet-win64-shipping.exe","wherewındsmeet-win64-shipping.exe"]
 
 state = {
     'running':False,'pid':None,'exe':None,'server_ip':None,
@@ -17,6 +16,7 @@ state = {
     'history':deque(maxlen=HISTORY),'last_ms':None,
     'last_spike':None,'is_spike':False,'prev_ms':None,
     'status':'Waiting for game...','session_id':None,
+    'connected_since':None,
 }
 
 def init_db():
@@ -24,12 +24,25 @@ def init_db():
     c.execute("""CREATE TABLE IF NOT EXISTS pings(
         id INTEGER PRIMARY KEY AUTOINCREMENT,ts TEXT,session_id TEXT,
         server_ip TEXT,ping_ms INTEGER,status TEXT,jitter INTEGER)""")
+    c.execute("""CREATE TABLE IF NOT EXISTS server_switches(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        switched_at TEXT,
+        from_ip TEXT,
+        to_ip TEXT,
+        duration_seconds INTEGER,
+        session_id TEXT)""")
     c.commit();c.close()
 
 def save_ping(sid,ip,ms,st,j):
     c=sqlite3.connect(DB_FILE)
     c.execute("INSERT INTO pings VALUES(NULL,?,?,?,?,?,?)",
         (datetime.now().isoformat(),sid,ip,ms,st,j))
+    c.commit();c.close()
+
+def save_switch(sid,from_ip,to_ip,duration_seconds):
+    c=sqlite3.connect(DB_FILE)
+    c.execute("INSERT INTO server_switches VALUES(NULL,?,?,?,?,?)",
+        (datetime.now().isoformat(),from_ip,to_ip,duration_seconds,sid))
     c.commit();c.close()
 
 def get_sessions():
@@ -56,6 +69,14 @@ def get_total_stats():
             COUNT(DISTINCT session_id) as sessions FROM pings""").fetchone()
         c.close();return dict(r) if r else None
     except:return None
+
+def get_server_switches():
+    try:
+        c=sqlite3.connect(DB_FILE);c.row_factory=sqlite3.Row
+        rows=c.execute("""SELECT switched_at,from_ip,to_ip,duration_seconds,session_id
+            FROM server_switches ORDER BY id DESC LIMIT 50""").fetchall()
+        c.close();return [dict(r) for r in rows]
+    except:return []
 
 def find_game():
     for p in psutil.process_iter(['pid','name']):
@@ -93,7 +114,7 @@ def ping_once(ip):
 def monitor_loop():
     s=state
     while True:
-        s.update({'running':False,'status':'Waiting for Where Winds Meet...'})
+        s.update({'running':False,'status':'Waiting for Where Winds Meet...','connected_since':None})
         pid,exe=None,None
         while not pid:
             pid,exe=find_game();time.sleep(2)
@@ -107,19 +128,26 @@ def monitor_loop():
         s['server_ip']=server_ip;s['status']='Fetching location...'
         city,country,isp=get_geo(server_ip)
         s.update({'geo_city':city,'geo_country':country,'geo_isp':isp,
-                  'count':0,'lost':0,'sum':0,'min':99999,'max':0,
-                  'jitter_sum':0,'jitter_count':0,'spikes':0,'streak':0,
-                  'history':deque(maxlen=HISTORY),'last_ms':None,'prev_ms':None,
-                  'last_spike':None,'running':True})
+            'count':0,'lost':0,'sum':0,'min':99999,'max':0,
+            'jitter_sum':0,'jitter_count':0,'spikes':0,'streak':0,
+            'history':deque(maxlen=HISTORY),'last_ms':None,'prev_ms':None,
+            'last_spike':None,'running':True})
         sid=datetime.now().strftime('%Y%m%d_%H%M%S');s['session_id']=sid
+        s['connected_since']=datetime.now().isoformat()
+        ip_connected_since=datetime.now()
         while True:
             if not find_game()[0]:break
+            # Check for server switch every 30 pings
             if s['count']>0 and s['count']%30==0:
                 nip=find_server_ip(pid)
                 if nip and nip!=server_ip:
+                    duration=int((datetime.now()-ip_connected_since).total_seconds())
+                    save_switch(sid,server_ip,nip,duration)
                     server_ip=nip;s['server_ip']=nip
                     city,country,isp=get_geo(nip)
                     s['geo_city']=city;s['geo_country']=country;s['geo_isp']=isp
+                    ip_connected_since=datetime.now()
+                    s['connected_since']=datetime.now().isoformat()
             ms=ping_once(server_ip)
             s['count']+=1;s['is_spike']=False
             if ms is None:
@@ -153,6 +181,8 @@ async def handler(ws):
             data=json.loads(msg)
             if data.get('type')=='get_sessions':
                 await ws.send(json.dumps({'type':'sessions','data':get_sessions(),'stats':get_total_stats()}))
+            if data.get('type')=='get_switches':
+                await ws.send(json.dumps({'type':'switches','data':get_server_switches()}))
     finally:
         CLIENTS.discard(ws)
 
@@ -174,7 +204,8 @@ async def broadcaster():
             'spikes':s['spikes'],'streak':s['streak'],
             'is_spike':s['is_spike'],'last_spike':s['last_spike'],
             'history':hist,'session_id':s['session_id'],
-            'ts':datetime.now().strftime('%d.%m.%Y  %H:%M:%S'),
+            'connected_since':s['connected_since'],
+            'ts':datetime.now().strftime('%d.%m.%Y %H:%M:%S'),
         }})
         dead=set()
         for ws in list(CLIENTS):
