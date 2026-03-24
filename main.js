@@ -6,6 +6,7 @@ const fs = require('fs')
 let win = null
 let tray = null
 let backend = null
+let overlay = null
 let useTray = true
 let isQuitting = false
 
@@ -60,6 +61,41 @@ function killBackend() {
     backend.kill('SIGTERM')
   } catch(e) {}
   backend = null
+}
+
+// ─── Overlay ─────────────────────────────────────────────────────────────────
+function createOverlay() {
+  if (overlay && !overlay.isDestroyed()) {
+    overlay.show()
+    overlay.focus()
+    return
+  }
+  overlay = new BrowserWindow({
+    width: 160, height: 50,
+    frame: false,
+    transparent: true,
+    backgroundColor: '#00000000',
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    resizable: false,
+    movable: true,
+    show: false,
+    webPreferences: {
+      nodeIntegration: true,
+      contextIsolation: false,
+    }
+  })
+  overlay.loadFile(path.join(__dirname, 'src', 'overlay.html'))
+  overlay.once('ready-to-show', () => overlay.show())
+  overlay.setAlwaysOnTop(true, 'screen-saver')
+  overlay.on('closed', () => { overlay = null })
+}
+
+function closeOverlay() {
+  if (overlay && !overlay.isDestroyed()) {
+    overlay.close()
+    overlay = null
+  }
 }
 
 // ─── Shape ──────────────────────────────────────────────────────────────────
@@ -119,7 +155,6 @@ function getTrayIcon() {
       console.warn('[tray] not found:', p)
     }
   }
-  // Fallback: white 16x16
   console.warn('[tray] using generated fallback icon')
   const size = 16
   const buf = Buffer.alloc(size * size * 4)
@@ -136,9 +171,13 @@ function buildTrayMenu() {
     { label: 'Anzeigen',   click: () => { if (win) { win.show(); win.focus(); applyRoundedShape() } } },
     { label: 'Verstecken', click: () => { if (win) win.hide() } },
     { type: 'separator' },
+    { label: 'Overlay anzeigen', click: () => createOverlay() },
+    { label: 'Overlay schließen', click: () => closeOverlay() },
+    { type: 'separator' },
     { label: 'Beenden', click: () => {
         isQuitting = true
         killBackend()
+        closeOverlay()
         if (tray) { try { tray.destroy(); tray = null } catch(e) {} }
         app.exit(0)
       }
@@ -186,7 +225,6 @@ function createWindow() {
   win.loadFile(path.join(__dirname, 'src', 'index.html'))
 
   win.once('ready-to-show', () => {
-    // Apply saved tray setting before showing
     const cfg = loadSettings()
     useTray = cfg.tray !== false
     createTray()
@@ -216,6 +254,7 @@ app.whenReady().then(() => {
 
 app.on('window-all-closed', () => {
   killBackend()
+  closeOverlay()
   if (tray) { try { tray.destroy() } catch(e) {} }
   app.quit()
 })
@@ -229,6 +268,7 @@ ipcMain.on('close', () => {
   } else {
     isQuitting = true
     killBackend()
+    closeOverlay()
     if (tray) { try { tray.destroy(); tray = null } catch(e) {} }
     app.exit(0)
   }
@@ -241,6 +281,16 @@ ipcMain.on('set-tray', (_, enable) => {
 
 ipcMain.on('set-startup', (_, enable) => {
   app.setLoginItemSettings({ openAtLogin: enable, path: app.getPath('exe') })
+})
+
+ipcMain.on('overlay-open',  () => createOverlay())
+ipcMain.on('overlay-close', () => closeOverlay())
+
+// Forward ping data to overlay
+ipcMain.on('ping-data', (_, data) => {
+  if (overlay && !overlay.isDestroyed()) {
+    overlay.webContents.send('ping-update', data)
+  }
 })
 
 ipcMain.handle('get-startup', () => {
