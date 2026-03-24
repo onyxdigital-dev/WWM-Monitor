@@ -289,7 +289,6 @@ function createWindow() {
     useTray = cfg.tray !== false
     createTray()
     win.show()
-    win.maximize()
     initUpdater()
   })
 
@@ -383,7 +382,6 @@ ipcMain.on('update-check-manual', () => {
     return
   }
   if (!app.isPackaged) {
-    // Dev-Mode: kein echtes Update möglich, aber UI-Feedback geben
     sendUpdateStatus({ type: 'checking' })
     setTimeout(() => sendUpdateStatus({ type: 'not-available' }), 1200)
     return
