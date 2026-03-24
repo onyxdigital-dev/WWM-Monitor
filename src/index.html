@@ -102,10 +102,8 @@ body {
   background:linear-gradient(90deg,transparent,rgba(255,255,255,0.28),transparent);
 }
 
-/* App layout */
 #app { display:flex; flex-direction:column; height:100vh; }
 
-/* Titlebar */
 #titlebar {
   display:flex; align-items:center;
   padding:0 18px; height:54px; flex-shrink:0;
@@ -140,25 +138,21 @@ body {
 .win-btn:hover { background:rgba(255,255,255,.12); color:white; }
 .win-btn.close:hover { background:rgba(239,68,68,.3); color:#ef4444; }
 
-/* Pages */
 #pages { flex:1; overflow:hidden; }
 .page { display:none; height:100%; }
 .page.active { display:flex; flex-direction:column; }
 
-/* Live scroll */
 #live-scroll {
   flex:1; padding:12px 14px 14px;
   display:flex; flex-direction:column; gap:9px;
 }
 
-/* Info row */
 .info-row { display:grid; grid-template-columns:repeat(5,1fr); }
 .info-cell { padding:12px 16px; border-right:1px solid var(--border); }
 .info-cell:last-child { border-right:none; }
 .info-label { font-size:8px; font-weight:700; color:var(--muted); letter-spacing:.08em; }
 .info-value { font-size:12px; color:var(--text); margin-top:4px; line-height:1.4; }
 
-/* Ping + graph row */
 .ping-row { display:flex; gap:9px; height:250px; flex-shrink:0; }
 .ping-card { width:210px; flex-shrink:0; padding:18px 20px; display:flex; flex-direction:column; gap:4px; }
 .ping-label { font-size:9px; font-weight:700; color:var(--muted); letter-spacing:.1em; }
@@ -177,7 +171,6 @@ body {
 .lat-bar-fill { height:100%; width:0%; border-radius:3px; background:rgba(255,255,255,.7); transition:width .6s cubic-bezier(.4,0,.2,1),background .4s; }
 #graph-canvas { width:100%; height:158px; display:block; }
 
-/* Stat tiles */
 .stat-row { display:grid; grid-template-columns:repeat(10,1fr); gap:5px; padding:8px; }
 .stat-tile {
   background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08);
@@ -192,7 +185,6 @@ body {
 .stat-val { font-size:20px; font-weight:800; line-height:1.1; }
 .stat-lbl { font-size:8px; font-weight:700; color:var(--muted); margin-top:4px; letter-spacing:.05em; }
 
-/* Last 10 */
 .last-card { padding:12px 16px; flex-shrink:0; }
 .sec-hdr { display:flex; align-items:center; gap:7px; margin-bottom:9px; }
 .sec-bar { width:3px; height:14px; background:rgba(255,255,255,.4); border-radius:2px; }
@@ -209,7 +201,6 @@ body {
 .badge-crit { background:rgba(239,68,68,.12);  border:1px solid rgba(239,68,68,.3);  color:#ef4444; }
 .badge-tout { background:rgba(239,68,68,.15);  border:1px solid rgba(239,68,68,.4);  color:#ff6666; }
 
-/* Map section */
 .map-section { display:flex; gap:9px; height:220px; flex-shrink:0; }
 .geo-card { width:200px; flex-shrink:0; padding:14px 16px; display:flex; flex-direction:column; justify-content:space-around; }
 .geo-lbl { font-size:8px; font-weight:700; color:var(--muted); letter-spacing:.08em; }
@@ -226,7 +217,6 @@ body {
 
 .spike-info { font-size:11px; color:rgba(255,255,255,.4); padding:0 4px; min-height:16px; flex-shrink:0; }
 
-/* Dashboard */
 #dash-scroll { flex:1; padding:12px 14px; display:flex; flex-direction:column; gap:9px; }
 .dash-grid { display:grid; grid-template-columns:repeat(8,1fr); gap:5px; padding:8px; }
 .table-card { flex:1; padding:14px 16px; display:flex; flex-direction:column; min-height:0; }
@@ -238,12 +228,10 @@ tbody tr:hover { background:rgba(255,255,255,.05); }
 tbody td { padding:9px 10px; color:var(--muted2); }
 tbody td:first-child { color:var(--text); font-family:'Consolas',monospace; font-size:10px; }
 
-/* Ping states */
 .ping-ok   { color:white!important;   text-shadow:0 0 30px rgba(255,255,255,.2)!important; }
 .ping-warn { color:#f59e0b!important;  text-shadow:0 0 30px rgba(245,158,11,.4)!important; }
 .ping-crit { color:#ef4444!important;  text-shadow:0 0 30px rgba(239,68,68,.5)!important; }
 
-/* Ambient orbs */
 .orb { position:fixed; border-radius:50%; filter:blur(80px); pointer-events:none; z-index:-1; opacity:.18; }
 .orb1 { width:400px; height:400px; background:rgba(255,255,255,.06); top:-120px; left:-80px; }
 .orb2 { width:300px; height:300px; background:rgba(255,255,255,.04); bottom:0; right:80px; }
@@ -257,7 +245,6 @@ tbody td:first-child { color:var(--text); font-family:'Consolas',monospace; font
 <div class="orb orb2"></div>
 <div id="app">
 
-  <!-- Titlebar -->
   <div id="titlebar">
     <img src="../assets/icon.png" style="width:28px;height:28px;border-radius:7px;margin-right:9px;flex-shrink:0;object-fit:cover;background:transparent;" />
     <span class="logo-text">WWM</span>
@@ -282,7 +269,6 @@ tbody td:first-child { color:var(--text); font-family:'Consolas',monospace; font
     <div class="page active" id="page-live">
       <div class="scrollable" id="live-scroll">
 
-        <!-- Info -->
         <div class="card info-row fade-in">
           <div class="info-cell"><div class="info-label">SERVER IP</div><div class="info-value" id="i-server">—</div></div>
           <div class="info-cell"><div class="info-label">LOCATION</div><div class="info-value" id="i-loc">—</div></div>
@@ -295,7 +281,6 @@ tbody td:first-child { color:var(--text); font-family:'Consolas',monospace; font
           </div>
         </div>
 
-        <!-- Ping + Graph -->
         <div class="ping-row fade-in">
           <div class="card ping-card">
             <div class="ping-label">LIVE PING</div>
@@ -311,7 +296,6 @@ tbody td:first-child { color:var(--text); font-family:'Consolas',monospace; font
           </div>
         </div>
 
-        <!-- Stats -->
         <div class="card fade-in">
           <div class="stat-row">
             <div class="stat-tile"><div class="stat-val" id="s-sent"   style="color:rgba(255,255,255,.65)">0</div><div class="stat-lbl">SENT</div></div>
@@ -329,7 +313,6 @@ tbody td:first-child { color:var(--text); font-family:'Consolas',monospace; font
 
         <div class="spike-info" id="spike-info"></div>
 
-        <!-- Last 10 -->
         <div class="card last-card fade-in">
           <div class="sec-hdr"><div class="sec-bar"></div><div class="sec-title">LAST 10 PINGS</div></div>
           <div class="badges" id="badges"></div>
@@ -371,7 +354,6 @@ tbody td:first-child { color:var(--text); font-family:'Consolas',monospace; font
             <div class="stat-tile"><div class="stat-val" id="d-sessions" style="color:rgba(255,255,255,.65)">—</div><div class="stat-lbl">SESSIONS</div></div>
           </div>
         </div>
-        <!-- Session History -->
         <div class="card table-card fade-in">
           <div class="sec-hdr"><div class="sec-bar"></div><div class="sec-title">SESSION HISTORY</div></div>
           <div class="table-scroll">
@@ -384,7 +366,6 @@ tbody td:first-child { color:var(--text); font-family:'Consolas',monospace; font
             </table>
           </div>
         </div>
-        <!-- Server Switch History -->
         <div class="card table-card fade-in" style="min-height:180px;">
           <div class="sec-hdr"><div class="sec-bar"></div><div class="sec-title">SERVER SWITCH HISTORY</div></div>
           <div class="table-scroll">
@@ -408,66 +389,38 @@ tbody td:first-child { color:var(--text); font-family:'Consolas',monospace; font
           <div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.1em;margin-bottom:16px;">GENERAL</div>
           <div style="display:flex;flex-direction:column;gap:14px;">
             <div style="display:flex;align-items:center;justify-content:space-between;">
-              <div>
-                <div style="font-size:13px;color:var(--text);">Start with Windows</div>
-                <div style="font-size:11px;color:var(--muted);margin-top:2px;">Launch automatically on startup</div>
-              </div>
+              <div><div style="font-size:13px;color:var(--text);">Start with Windows</div><div style="font-size:11px;color:var(--muted);margin-top:2px;">Launch automatically on startup</div></div>
               <label class="toggle no-drag"><input type="checkbox" id="s-startup" onchange="saveSetting('startup',this.checked)"><span class="toggle-track"></span></label>
             </div>
             <div style="display:flex;align-items:center;justify-content:space-between;">
-              <div>
-                <div style="font-size:13px;color:var(--text);">Minimize to Tray</div>
-                <div style="font-size:11px;color:var(--muted);margin-top:2px;">Keep running in system tray</div>
-              </div>
+              <div><div style="font-size:13px;color:var(--text);">Minimize to Tray</div><div style="font-size:11px;color:var(--muted);margin-top:2px;">Keep running in system tray</div></div>
               <label class="toggle no-drag"><input type="checkbox" id="s-tray" checked onchange="saveSetting('tray',this.checked)"><span class="toggle-track"></span></label>
             </div>
             <div style="display:flex;align-items:center;justify-content:space-between;">
-              <div>
-                <div style="font-size:13px;color:var(--text);">Spike Notifications</div>
-                <div style="font-size:11px;color:var(--muted);margin-top:2px;">Alert when ping exceeds threshold</div>
-              </div>
+              <div><div style="font-size:13px;color:var(--text);">Spike Notifications</div><div style="font-size:11px;color:var(--muted);margin-top:2px;">Alert when ping exceeds threshold</div></div>
               <label class="toggle no-drag"><input type="checkbox" id="s-notify" checked onchange="saveSetting('notify',this.checked)"><span class="toggle-track"></span></label>
             </div>
           </div>
         </div>
-
         <div class="card" style="padding:22px 24px;">
           <div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.1em;margin-bottom:16px;">ALERT THRESHOLDS</div>
           <div style="display:flex;flex-direction:column;gap:16px;">
             <div>
-              <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
-                <span style="font-size:12px;color:var(--text);">Spike Warning</span>
-                <span style="font-size:12px;color:var(--muted2);" id="lbl-spike">150 ms</span>
-              </div>
-              <input type="range" class="slider no-drag" min="50" max="500" value="150" id="s-spike"
-                oninput="document.getElementById('lbl-spike').textContent=this.value+' ms';saveSetting('spikeMs',+this.value)">
+              <div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-size:12px;color:var(--text);">Spike Warning</span><span style="font-size:12px;color:var(--muted2);" id="lbl-spike">150 ms</span></div>
+              <input type="range" class="slider no-drag" min="50" max="500" value="150" id="s-spike" oninput="document.getElementById('lbl-spike').textContent=this.value+' ms';saveSetting('spikeMs',+this.value)">
             </div>
             <div>
-              <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
-                <span style="font-size:12px;color:var(--text);">Packet Loss Warning</span>
-                <span style="font-size:12px;color:var(--muted2);" id="lbl-loss">5 %</span>
-              </div>
-              <input type="range" class="slider no-drag" min="1" max="50" value="5" id="s-loss"
-                oninput="document.getElementById('lbl-loss').textContent=this.value+' %';saveSetting('lossPct',+this.value)">
+              <div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-size:12px;color:var(--text);">Packet Loss Warning</span><span style="font-size:12px;color:var(--muted2);" id="lbl-loss">5 %</span></div>
+              <input type="range" class="slider no-drag" min="1" max="50" value="5" id="s-loss" oninput="document.getElementById('lbl-loss').textContent=this.value+' %';saveSetting('lossPct',+this.value)">
             </div>
           </div>
         </div>
-
         <div class="card" style="padding:22px 24px;">
           <div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.1em;margin-bottom:16px;">ABOUT</div>
           <div style="display:flex;flex-direction:column;gap:6px;">
-            <div style="display:flex;justify-content:space-between;">
-              <span style="font-size:12px;color:var(--muted);">Version</span>
-              <span style="font-size:12px;color:var(--text);">1.0.0</span>
-            </div>
-            <div style="display:flex;justify-content:space-between;">
-              <span style="font-size:12px;color:var(--muted);">Developer</span>
-              <span style="font-size:12px;color:var(--text);">Onyx Digital</span>
-            </div>
-            <div style="display:flex;justify-content:space-between;">
-              <span style="font-size:12px;color:var(--muted);">Backend</span>
-              <span style="font-size:12px;color:var(--text);">Python 3.14 / WebSocket</span>
-            </div>
+            <div style="display:flex;justify-content:space-between;"><span style="font-size:12px;color:var(--muted);">Version</span><span style="font-size:12px;color:var(--text);">1.0.0</span></div>
+            <div style="display:flex;justify-content:space-between;"><span style="font-size:12px;color:var(--muted);">Developer</span><span style="font-size:12px;color:var(--text);">Onyx Digital</span></div>
+            <div style="display:flex;justify-content:space-between;"><span style="font-size:12px;color:var(--muted);">Backend</span><span style="font-size:12px;color:var(--text);">Python 3.14 / WebSocket</span></div>
           </div>
         </div>
       </div>
@@ -534,15 +487,13 @@ function updateLive(d) {
   document.getElementById('i-proc').textContent=d.exe?`${d.exe} (${d.pid})`:'—';
   document.getElementById('i-sess').textContent=d.ts;
 
-  // Connected-for timer
   if (d.connected_since) {
-    const diff = Math.floor((Date.now() - new Date(d.connected_since).getTime()) / 1000);
-    const h=Math.floor(diff/3600), m=Math.floor(diff%3600/60), s=diff%60;
-    const dur = h>0 ? `${h}h ${m}m ${s}s` : m>0 ? `${m}m ${s}s` : `${s}s`;
-    document.getElementById('i-connected-since').textContent =
-      new Date(d.connected_since).toLocaleTimeString('de-DE') + '  +' + dur;
+    const diff=Math.floor((Date.now()-new Date(d.connected_since).getTime())/1000);
+    const h=Math.floor(diff/3600),m=Math.floor(diff%3600/60),s=diff%60;
+    const dur=h>0?`${h}h ${m}m ${s}s`:m>0?`${m}m ${s}s`:`${s}s`;
+    document.getElementById('i-connected-since').textContent=new Date(d.connected_since).toLocaleTimeString('de-DE')+'  +'+dur;
   } else {
-    document.getElementById('i-connected-since').textContent = '';
+    document.getElementById('i-connected-since').textContent='';
   }
 
   const pn=document.getElementById('ping-num');
@@ -606,55 +557,46 @@ function updateLive(d) {
   graphHistory=d.history||[];
   drawGraph();
   updateMap(d);
-  if (ms !== null && ms !== undefined) checkSpike(ms);
+  if (ms!==null&&ms!==undefined) checkSpike(ms);
 }
 
 // ── Graph ──────────────────────────────────────────────────────────────────
 function drawGraph() {
   const canvas=document.getElementById('graph-canvas');
-  canvas.width=canvas.offsetWidth||800;
-  canvas.height=158;
-  const ctx=canvas.getContext('2d');
-  const W=canvas.width,H=canvas.height;
-  const hist=graphHistory;
+  canvas.width=canvas.offsetWidth||800; canvas.height=158;
+  const ctx=canvas.getContext('2d'),W=canvas.width,H=canvas.height,hist=graphHistory;
   if (!hist.length) return;
   ctx.clearRect(0,0,W,H);
   const valid=hist.filter(v=>v!==null);
   if (!valid.length) return;
-  const maxV=Math.max(...valid,CRIT)+20;
-  const n=hist.length, step=W/Math.max(n,1), pad=8;
+  const maxV=Math.max(...valid,CRIT)+20,n=hist.length,step=W/Math.max(n,1),pad=8;
   const yFor=v=>H-Math.round((v/maxV)*(H-pad*2))-pad;
-
   [[WARN,'rgba(245,158,11,.2)'],[CRIT,'rgba(239,68,68,.25)']].forEach(([val,col])=>{
-    ctx.strokeStyle=col; ctx.setLineDash([4,4]); ctx.lineWidth=1;
-    ctx.beginPath(); ctx.moveTo(0,yFor(val)); ctx.lineTo(W,yFor(val)); ctx.stroke();
+    ctx.strokeStyle=col;ctx.setLineDash([4,4]);ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(0,yFor(val));ctx.lineTo(W,yFor(val));ctx.stroke();
   });
   ctx.setLineDash([]);
-
-  const pts=hist.map((v,i)=>({x:i*step+step/2, y:v!==null?yFor(v):H, v}));
-  ctx.beginPath();
-  ctx.moveTo(pts[0].x,H);
+  const pts=hist.map((v,i)=>({x:i*step+step/2,y:v!==null?yFor(v):H,v}));
+  ctx.beginPath();ctx.moveTo(pts[0].x,H);
   pts.forEach(({x,y})=>ctx.lineTo(x,y));
-  ctx.lineTo(pts[pts.length-1].x,H); ctx.closePath();
+  ctx.lineTo(pts[pts.length-1].x,H);ctx.closePath();
   const g=ctx.createLinearGradient(0,0,0,H);
-  g.addColorStop(0,'rgba(255,255,255,.1)'); g.addColorStop(1,'rgba(255,255,255,0)');
-  ctx.fillStyle=g; ctx.fill();
-
+  g.addColorStop(0,'rgba(255,255,255,.1)');g.addColorStop(1,'rgba(255,255,255,0)');
+  ctx.fillStyle=g;ctx.fill();
   for (let i=0;i<pts.length-1;i++) {
-    const {x:x1,y:y1,v:v1}=pts[i],{x:x2,y:y2}=pts[i+1];
+    const{x:x1,y:y1,v:v1}=pts[i],{x:x2,y:y2}=pts[i+1];
     if (v1===null) continue;
-    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2);
+    ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);
     ctx.strokeStyle=v1>=CRIT?'#ef4444':v1>=WARN?'#f59e0b':'rgba(255,255,255,.75)';
-    ctx.lineWidth=2; ctx.stroke();
+    ctx.lineWidth=2;ctx.stroke();
   }
   pts.forEach(({x,y,v})=>{
     if (v===null) return;
-    ctx.beginPath(); ctx.arc(x,y,3,0,Math.PI*2);
-    ctx.fillStyle=v>=CRIT?'#ef4444':v>=WARN?'#f59e0b':'rgba(255,255,255,.8)';
-    ctx.fill();
+    ctx.beginPath();ctx.arc(x,y,3,0,Math.PI*2);
+    ctx.fillStyle=v>=CRIT?'#ef4444':v>=WARN?'#f59e0b':'rgba(255,255,255,.8)';ctx.fill();
   });
 }
-window.addEventListener('resize', drawGraph);
+window.addEventListener('resize',drawGraph);
 
 // ── World Map ──────────────────────────────────────────────────────────────
 let serverLatLon=null, lastMappedIp=null, mapAnimFrame=null, mapPulse=0, worldPolygons=null;
@@ -663,65 +605,125 @@ let isDragging=false, dragStart=null, viewAtDrag=null;
 const MIN_SCALE=0.8, MAX_SCALE=12;
 const MAP_W=1000, MAP_H=500;
 
+// Past servers: [{ip, lat, lon, label}]
+let pastServers=[];
+
+// Smooth zoom animation
+let zoomAnim=null;
+function smoothZoomTo(targetLon, targetLat, targetScale) {
+  if (zoomAnim) cancelAnimationFrame(zoomAnim);
+  const canvas=getCanvas(); if(!canvas) return;
+  const W=canvas.width||800, H=canvas.height||220;
+  const bx=(targetLon+180)/360*MAP_W, by=(90-targetLat)/180*MAP_H;
+  const destX=W/2-bx*targetScale;
+  const destY=H/2-by*targetScale;
+  const startX=view.x, startY=view.y, startS=view.scale;
+  const startTime=performance.now();
+  const DURATION=900;
+  function step(now) {
+    const t=Math.min((now-startTime)/DURATION,1);
+    const e=t<0.5?2*t*t:1-Math.pow(-2*t+2,2)/2; // easeInOutQuad
+    view.scale=startS+(targetScale-startS)*e;
+    view.x=startX+(destX-startX)*e;
+    view.y=startY+(destY-startY)*e;
+    if (t<1) zoomAnim=requestAnimationFrame(step);
+    else zoomAnim=null;
+  }
+  zoomAnim=requestAnimationFrame(step);
+}
+
 function decodeTopo(topo) {
   const arcs=topo.arcs, polygons=[];
-  const [sx,sy]=topo.transform.scale, [tx,ty]=topo.transform.translate;
+  const [sx,sy]=topo.transform.scale,[tx,ty]=topo.transform.translate;
   function decodeArc(idx) {
-    const rev=idx<0, arc=arcs[rev?~idx:idx];
+    const rev=idx<0,arc=arcs[rev?~idx:idx];
     let cx=0,cy=0;
     const pts=arc.map(([dx,dy])=>{cx+=dx;cy+=dy;return[cx*sx+tx,cy*sy+ty];});
-    if(rev)pts.reverse(); return pts;
+    if(rev)pts.reverse();return pts;
   }
   topo.objects.countries.geometries.forEach(geo=>{
-    const collect=(arcsArr)=>{ const ring=[]; arcsArr.forEach(idx=>decodeArc(idx).forEach(p=>ring.push(p))); polygons.push(ring); };
-    if(geo.type==='Polygon') geo.arcs.forEach(collect);
-    else if(geo.type==='MultiPolygon') geo.arcs.forEach(a=>a.forEach(collect));
+    const collect=(arcsArr)=>{const ring=[];arcsArr.forEach(idx=>decodeArc(idx).forEach(p=>ring.push(p)));polygons.push(ring);};
+    if(geo.type==='Polygon')geo.arcs.forEach(collect);
+    else if(geo.type==='MultiPolygon')geo.arcs.forEach(a=>a.forEach(collect));
   });
   return polygons;
 }
 
 function getCanvas(){return document.getElementById('map-canvas');}
 function worldToCanvas(lon,lat){
-  const bx=(lon+180)/360*MAP_W, by=(90-lat)/180*MAP_H;
-  return[bx*view.scale+view.x, by*view.scale+view.y];
+  const bx=(lon+180)/360*MAP_W,by=(90-lat)/180*MAP_H;
+  return[bx*view.scale+view.x,by*view.scale+view.y];
 }
 
 function drawMapCanvas() {
-  const canvas=getCanvas(); if(!canvas)return;
-  const W=canvas.offsetWidth||800, H=canvas.offsetHeight||220;
+  const canvas=getCanvas();if(!canvas)return;
+  const W=canvas.offsetWidth||800,H=canvas.offsetHeight||220;
   if(canvas.width!==W||canvas.height!==H){
-    canvas.width=W; canvas.height=H;
+    canvas.width=W;canvas.height=H;
     if(view.x===0&&view.y===0&&view.scale===1){view.scale=H/MAP_H;view.x=(W-MAP_W*view.scale)/2;view.y=0;}
   }
   const ctx=canvas.getContext('2d');
-  ctx.clearRect(0,0,W,H); ctx.fillStyle='#0a0a0a'; ctx.fillRect(0,0,W,H);
-  ctx.setLineDash([2,8]); ctx.lineWidth=0.5; ctx.strokeStyle='rgba(255,255,255,0.05)';
+  ctx.clearRect(0,0,W,H);ctx.fillStyle='#0a0a0a';ctx.fillRect(0,0,W,H);
+
+  // Grid
+  ctx.setLineDash([2,8]);ctx.lineWidth=0.5;ctx.strokeStyle='rgba(255,255,255,0.05)';
   for(let lon=-180;lon<=180;lon+=30){const[x]=worldToCanvas(lon,0);ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
   for(let lat=-90;lat<=90;lat+=30){const[,y]=worldToCanvas(0,lat);ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
   ctx.setLineDash([]);
+
+  // Countries
   if(worldPolygons){
-    ctx.fillStyle='rgba(255,255,255,0.08)'; ctx.strokeStyle='rgba(255,255,255,0.22)'; ctx.lineWidth=0.7;
+    ctx.fillStyle='rgba(255,255,255,0.08)';ctx.strokeStyle='rgba(255,255,255,0.22)';ctx.lineWidth=0.7;
     worldPolygons.forEach(ring=>{
       if(ring.length<3)return;
       ctx.beginPath();
       ring.forEach(([lon,lat],i)=>{const[x,y]=worldToCanvas(lon,lat);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
-      ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.closePath();ctx.fill();ctx.stroke();
     });
   }
+
+  // Past servers (dimmed, smaller dots with label)
+  pastServers.forEach(ps=>{
+    if(!ps.lat||!ps.lon)return;
+    // Skip if it's the current active server
+    if(serverLatLon&&Math.abs(ps.lat-serverLatLon[0])<0.01&&Math.abs(ps.lon-serverLatLon[1])<0.01)return;
+    const[px,py]=worldToCanvas(ps.lon,ps.lat);
+    // Outer ring
+    ctx.beginPath();ctx.arc(px,py,5,0,Math.PI*2);
+    ctx.strokeStyle='rgba(255,255,255,0.25)';ctx.lineWidth=1;ctx.stroke();
+    // Inner dot
+    ctx.beginPath();ctx.arc(px,py,3,0,Math.PI*2);
+    ctx.fillStyle='rgba(255,255,255,0.18)';ctx.fill();
+    // Label
+    if(view.scale>1.5){
+      ctx.fillStyle='rgba(255,255,255,0.35)';
+      ctx.font=`${Math.min(10,8*view.scale/3)}px Segoe UI`;
+      ctx.fillText(ps.label,px+7,py-4);
+    }
+  });
+
+  // Current server
   if(serverLatLon){
     const[srvX,srvY]=worldToCanvas(serverLatLon[1],serverLatLon[0]);
     const[youX,youY]=worldToCanvas(10,51);
-    ctx.setLineDash([4,6]); ctx.strokeStyle='rgba(255,255,255,0.22)'; ctx.lineWidth=1;
-    ctx.beginPath(); ctx.moveTo(youX,youY); ctx.lineTo(srvX,srvY); ctx.stroke(); ctx.setLineDash([]);
-    ctx.beginPath(); ctx.arc(youX,youY,4,0,Math.PI*2); ctx.fillStyle='rgba(255,255,255,0.45)'; ctx.fill();
+    // Line player→server
+    ctx.setLineDash([4,6]);ctx.strokeStyle='rgba(255,255,255,0.22)';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(youX,youY);ctx.lineTo(srvX,srvY);ctx.stroke();ctx.setLineDash([]);
+    // Player dot
+    ctx.beginPath();ctx.arc(youX,youY,4,0,Math.PI*2);
+    ctx.fillStyle='rgba(255,255,255,0.45)';ctx.fill();
+    // Pulse ring
     const pulse=(mapPulse%420)/420;
-    ctx.beginPath(); ctx.arc(srvX,srvY,7+pulse*22,0,Math.PI*2);
-    ctx.strokeStyle=`rgba(255,255,255,${Math.pow(1-pulse,2)*0.7})`; ctx.lineWidth=1.5; ctx.stroke();
-    ctx.shadowBlur=16; ctx.shadowColor='rgba(255,255,255,0.8)';
-    ctx.beginPath(); ctx.arc(srvX,srvY,6,0,Math.PI*2); ctx.fillStyle='white'; ctx.fill(); ctx.shadowBlur=0;
+    ctx.beginPath();ctx.arc(srvX,srvY,7+pulse*22,0,Math.PI*2);
+    ctx.strokeStyle=`rgba(255,255,255,${Math.pow(1-pulse,2)*0.7})`;ctx.lineWidth=1.5;ctx.stroke();
+    // Server dot glow
+    ctx.shadowBlur=16;ctx.shadowColor='rgba(255,255,255,0.8)';
+    ctx.beginPath();ctx.arc(srvX,srvY,6,0,Math.PI*2);
+    ctx.fillStyle='white';ctx.fill();ctx.shadowBlur=0;
   }
+
   if(view.scale<=H/MAP_H*1.1){
-    ctx.fillStyle='rgba(255,255,255,0.15)'; ctx.font='10px Segoe UI';
+    ctx.fillStyle='rgba(255,255,255,0.15)';ctx.font='10px Segoe UI';
     ctx.fillText('Scroll to zoom  ·  Drag to pan  ·  Dblclick → server',W/2-130,H-10);
   }
 }
@@ -734,24 +736,26 @@ function clampView(W,H){
 }
 
 function initMapInteraction(){
-  const canvas=getCanvas(); if(!canvas)return;
+  const canvas=getCanvas();if(!canvas)return;
   canvas.addEventListener('wheel',(e)=>{
     e.preventDefault();
+    if(zoomAnim){cancelAnimationFrame(zoomAnim);zoomAnim=null;}
     const rect=canvas.getBoundingClientRect(),mx=e.clientX-rect.left,my=e.clientY-rect.top;
     const delta=e.deltaY>0?0.85:1.18;
     const newScale=Math.max(MIN_SCALE,Math.min(MAX_SCALE,view.scale*delta));
     view.x=mx-(mx-view.x)*(newScale/view.scale);
     view.y=my-(my-view.y)*(newScale/view.scale);
-    view.scale=newScale; clampView(canvas.width,canvas.height);
+    view.scale=newScale;clampView(canvas.width,canvas.height);
   },{passive:false});
-  canvas.addEventListener('mousedown',(e)=>{isDragging=true;dragStart={x:e.clientX,y:e.clientY};viewAtDrag={x:view.x,y:view.y};canvas.style.cursor='grabbing';});
+  canvas.addEventListener('mousedown',(e)=>{
+    if(zoomAnim){cancelAnimationFrame(zoomAnim);zoomAnim=null;}
+    isDragging=true;dragStart={x:e.clientX,y:e.clientY};viewAtDrag={x:view.x,y:view.y};canvas.style.cursor='grabbing';
+  });
   window.addEventListener('mousemove',(e)=>{if(!isDragging)return;view.x=viewAtDrag.x+(e.clientX-dragStart.x);view.y=viewAtDrag.y+(e.clientY-dragStart.y);});
   window.addEventListener('mouseup',()=>{isDragging=false;if(getCanvas())getCanvas().style.cursor='grab';});
   canvas.addEventListener('dblclick',()=>{
     if(!serverLatLon)return;
-    const W=canvas.width,H=canvas.height;
-    const bx=(serverLatLon[1]+180)/360*MAP_W,by=(90-serverLatLon[0])/180*MAP_H;
-    view.scale=6;view.x=W/2-bx*view.scale;view.y=H/2-by*view.scale;
+    smoothZoomTo(serverLatLon[1],serverLatLon[0],6);
   });
   canvas.style.cursor='grab';
   const wrap=canvas.parentElement;
@@ -768,6 +772,7 @@ function initMapInteraction(){
 }
 
 function zoomBtn(factor){
+  if(zoomAnim){cancelAnimationFrame(zoomAnim);zoomAnim=null;}
   const canvas=getCanvas(),W=canvas.width,H=canvas.height,cx=W/2,cy=H/2;
   const newScale=Math.max(MIN_SCALE,Math.min(MAX_SCALE,view.scale*factor));
   view.x=cx-(cx-view.x)*(newScale/view.scale);
@@ -775,6 +780,7 @@ function zoomBtn(factor){
   view.scale=newScale;
 }
 function zoomReset(){
+  if(zoomAnim){cancelAnimationFrame(zoomAnim);zoomAnim=null;}
   const canvas=getCanvas(),H=canvas?canvas.height:220;
   view.scale=H/MAP_H;view.x=(canvas.width-MAP_W*view.scale)/2;view.y=0;
 }
@@ -790,12 +796,32 @@ function updateMap(d){
   document.getElementById('geo-isp').textContent=d.geo_isp||'—';
   document.getElementById('geo-ip').textContent=d.server_ip||'—';
   document.getElementById('geo-ping').textContent=(d.last_ms!==null&&d.last_ms!==undefined)?d.last_ms+' ms':'— ms';
+
   if(!d.server_ip||d.server_ip===lastMappedIp||(!d.geo_city&&!d.geo_country))return;
+
+  // Archive previous server as a past dot
+  if(serverLatLon&&lastMappedIp){
+    const alreadyStored=pastServers.some(p=>p.ip===lastMappedIp);
+    if(!alreadyStored){
+      pastServers.push({ip:lastMappedIp,lat:serverLatLon[0],lon:serverLatLon[1],label:document.getElementById('map-label').textContent});
+      // Keep max 20 past servers
+      if(pastServers.length>20)pastServers.shift();
+    }
+  }
+
   lastMappedIp=d.server_ip;
   const label=[d.geo_city,d.geo_country].filter(Boolean).join(', ')||d.server_ip;
   document.getElementById('map-label').textContent=label;
+
   fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(label)}&format=json&limit=1`)
-    .then(r=>r.json()).then(res=>{if(!res.length)return;serverLatLon=[parseFloat(res[0].lat),parseFloat(res[0].lon)];}).catch(()=>{});
+    .then(r=>r.json())
+    .then(res=>{
+      if(!res.length)return;
+      const newLat=parseFloat(res[0].lat),newLon=parseFloat(res[0].lon);
+      serverLatLon=[newLat,newLon];
+      // Auto-zoom to server with smooth animation
+      smoothZoomTo(newLon,newLat,5);
+    }).catch(()=>{});
 }
 
 window.addEventListener('load',()=>{
@@ -803,7 +829,12 @@ window.addEventListener('load',()=>{
   initMapInteraction();
   animateMap();
   loadSettings();
-  window.addEventListener('resize',()=>{const c=getCanvas();if(c){view.scale=c.offsetHeight/MAP_H;view.x=(c.offsetWidth-MAP_W*view.scale)/2;view.y=0;}drawMapCanvas();});
+  window.addEventListener('resize',()=>{
+    if(zoomAnim){cancelAnimationFrame(zoomAnim);zoomAnim=null;}
+    const c=getCanvas();
+    if(c){view.scale=c.offsetHeight/MAP_H;view.x=(c.offsetWidth-MAP_W*view.scale)/2;view.y=0;}
+    drawMapCanvas();
+  });
 });
 
 // ── Dashboard ──────────────────────────────────────────────────────────────
@@ -833,42 +864,42 @@ function updateDash(rows,stats){
 
 // ── Server Switch History ──────────────────────────────────────────────────
 function fmtDuration(secs){
-  if(!secs&&secs!==0) return '—';
+  if(!secs&&secs!==0)return'—';
   const h=Math.floor(secs/3600),m=Math.floor(secs%3600/60),s=secs%60;
-  if(h>0) return `${h}h ${m}m ${s}s`;
-  if(m>0) return `${m}m ${s}s`;
-  return `${s}s`;
+  if(h>0)return`${h}h ${m}m ${s}s`;
+  if(m>0)return`${m}m ${s}s`;
+  return`${s}s`;
 }
 function fmtTs(iso){
-  if(!iso) return '—';
+  if(!iso)return'—';
   try{const d=new Date(iso);return d.toLocaleDateString('de-DE')+' '+d.toLocaleTimeString('de-DE');}catch(e){return iso;}
 }
 
 function updateSwitches(rows){
   const tbody=document.getElementById('switch-tbody');
-  if(!tbody) return;
+  if(!tbody)return;
   tbody.innerHTML='';
   if(!rows||!rows.length){
     const tr=document.createElement('tr'),td=document.createElement('td');
-    td.colSpan=5; td.textContent='No server switches recorded yet.';
+    td.colSpan=5;td.textContent='No server switches recorded yet.';
     td.style.cssText='text-align:center;color:var(--muted);padding:20px;';
-    tr.appendChild(td); tbody.appendChild(tr); return;
+    tr.appendChild(td);tbody.appendChild(tr);return;
   }
   rows.forEach(r=>{
     const tr=document.createElement('tr');
-    [fmtTs(r.switched_at), r.from_ip, r.to_ip, fmtDuration(r.duration_seconds), r.session_id]
+    [fmtTs(r.switched_at),r.from_ip,r.to_ip,fmtDuration(r.duration_seconds),r.session_id]
       .forEach((val,i)=>{
         const td=document.createElement('td');
         td.textContent=val;
-        if(i===1||i===2) td.style.fontFamily='Consolas,monospace';
-        if(i===3) td.style.color='#22c55e';
+        if(i===1||i===2)td.style.fontFamily='Consolas,monospace';
+        if(i===3)td.style.color='#22c55e';
         tr.appendChild(td);
       });
     tbody.appendChild(tr);
   });
 }
 
-// ── Settings (persistent via IPC → userData/settings.json) ────────────────
+// ── Settings ───────────────────────────────────────────────────────────────────
 let cfg={startup:false,tray:true,notify:true,spikeMs:150,lossPct:5};
 
 function applySettingsToUI(){
@@ -883,9 +914,9 @@ function applySettingsToUI(){
 
 function saveSetting(k,v){
   cfg[k]=v;
-  if(window.electronAPI&&window.electronAPI.saveSettings) window.electronAPI.saveSettings(cfg);
-  if(k==='startup'&&window.electronAPI) window.electronAPI.send('set-startup',v);
-  if(k==='tray'&&window.electronAPI) window.electronAPI.send('set-tray',v);
+  if(window.electronAPI&&window.electronAPI.saveSettings)window.electronAPI.saveSettings(cfg);
+  if(k==='startup'&&window.electronAPI)window.electronAPI.send('set-startup',v);
+  if(k==='tray'&&window.electronAPI)window.electronAPI.send('set-tray',v);
 }
 
 function loadSettings(){
@@ -909,16 +940,16 @@ function loadSettings(){
 // ── Spike toast ────────────────────────────────────────────────────────────
 let toastTimer=null;
 function showSpikeToast(ms){
-  if(!cfg.notify) return;
+  if(!cfg.notify)return;
   document.getElementById('toast-val').textContent=ms+' ms';
   const t=document.getElementById('spike-toast');
-  t.classList.add('show'); clearTimeout(toastTimer);
+  t.classList.add('show');clearTimeout(toastTimer);
   toastTimer=setTimeout(()=>t.classList.remove('show'),4000);
 }
 
 let _lastPing=0;
 function checkSpike(ping){
-  if(ping>(cfg.spikeMs||150)&&_lastPing<=(cfg.spikeMs||150)) showSpikeToast(ping);
+  if(ping>(cfg.spikeMs||150)&&_lastPing<=(cfg.spikeMs||150))showSpikeToast(ping);
   _lastPing=ping;
 }
 </script>
