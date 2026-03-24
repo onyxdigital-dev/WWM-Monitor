@@ -299,9 +299,6 @@ tbody td:first-child { color:var(--text); font-family:'Consolas',monospace; font
                 <div class="provider-bar-fill" id="provider-bar" style="width:0%;background:#22c55e;"></div>
               </div>
             </div>
-            <!-- Buttons -->
-            <button class="event-btn no-drag" style="margin-top:10px;" onclick="markEvent()">⚑ MARK EVENT</button>
-            <button class="overlay-btn no-drag" id="overlay-toggle-btn" style="margin-top:6px;" onclick="toggleOverlay()">⧉ OVERLAY</button>
           </div>
           <div class="card graph-card">
             <div class="graph-sublabel">LATENCY BAR</div>
@@ -371,10 +368,11 @@ tbody td:first-child { color:var(--text); font-family:'Consolas',monospace; font
             <div class="stat-tile"><div class="stat-val" id="d-sessions" style="color:rgba(255,255,255,.65)">—</div><div class="stat-lbl">SESSIONS</div></div>
           </div>
         </div>
-        <!-- Export + Event buttons row -->
+        <!-- Action buttons row: Export + Mark Event + Overlay -->
         <div style="display:flex;gap:8px;padding:0 2px;" class="fade-in">
           <button class="export-btn no-drag" onclick="exportCSV()">⬇ EXPORT CSV</button>
           <button class="event-btn no-drag" onclick="markEvent()">⚑ MARK EVENT</button>
+          <button class="overlay-btn no-drag" id="overlay-toggle-btn" onclick="toggleOverlay()">⧉ OVERLAY</button>
         </div>
         <div class="card table-card fade-in">
           <div class="sec-hdr"><div class="sec-bar"></div><div class="sec-title">SESSION HISTORY</div></div>
