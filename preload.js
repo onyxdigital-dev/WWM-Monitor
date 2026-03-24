@@ -6,4 +6,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getStartup:   () => ipcRenderer.invoke('get-startup'),
   getSettings:  () => ipcRenderer.invoke('get-settings'),
   saveSettings: (cfg) => ipcRenderer.invoke('save-settings', cfg),
+  openOverlay:  () => ipcRenderer.send('overlay-open'),
+  closeOverlay: () => ipcRenderer.send('overlay-close'),
+  sendPingData: (data) => ipcRenderer.send('ping-data', data),
 })
