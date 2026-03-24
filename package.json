@@ -31,6 +31,10 @@
       {
         "from": "dist/backend.exe",
         "to": "backend.exe"
+      },
+      {
+        "from": "assets/",
+        "to": "assets/"
       }
     ],
     "files": [

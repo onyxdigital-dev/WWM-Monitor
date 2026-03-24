@@ -140,6 +140,7 @@ function createTray() {
 
 // ─── Window ──────────────────────────────────────────────────────────────────
 function createWindow() {
+  const iconPath = path.join(app.isPackaged ? process.resourcesPath : __dirname, 'assets', 'icon.png')
   win = new BrowserWindow({
     width: 1220, height: 840,
     minWidth: 1000, minHeight: 680,
@@ -149,6 +150,7 @@ function createWindow() {
     roundedCorners: false,
     shadow: false,
     show: false,
+    icon: iconPath,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
