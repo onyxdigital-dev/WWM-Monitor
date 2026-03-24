@@ -36,29 +36,38 @@ body { width:100%; height:100%; background:transparent !important; overflow:hidd
 .toggle input:checked + .toggle-track::after { transform:translateX(18px); background:#0a0a0a; }
 .slider { -webkit-appearance:none; width:100%; height:4px; background:rgba(255,255,255,0.12); border-radius:2px; outline:none; }
 .slider::-webkit-slider-thumb { -webkit-appearance:none; width:16px; height:16px; border-radius:50%; background:white; cursor:pointer; box-shadow:0 0 8px rgba(255,255,255,0.4); }
-#spike-toast {
-  position:fixed; bottom:24px; right:24px; z-index:999;
-  background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4);
-  backdrop-filter:blur(16px); border-radius:14px;
-  padding:14px 20px; display:flex; align-items:center; gap:12px;
-  transform:translateX(120%); transition:transform .4s cubic-bezier(.34,1.56,.64,1);
-  pointer-events:none;
+
+/* ── Toasts ── */
+.toast {
+  position:fixed; right:20px; z-index:9999;
+  min-width:220px; max-width:280px;
+  background:rgba(10,10,10,0.82);
+  backdrop-filter:blur(28px); -webkit-backdrop-filter:blur(28px);
+  border-radius:16px; padding:13px 16px 13px 20px;
+  display:flex; align-items:center; gap:12px;
+  transform:translateX(calc(100% + 28px));
+  transition:transform .45s cubic-bezier(.34,1.4,.64,1), opacity .3s ease;
+  opacity:0; pointer-events:none;
+  box-shadow:0 8px 40px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.07);
+  overflow:hidden;
 }
-#spike-toast.show { transform:translateX(0); }
-#spike-toast .toast-icon { font-size:20px; }
-#spike-toast .toast-text { font-size:12px; color:var(--text); }
-#spike-toast .toast-val { font-size:18px; font-weight:800; color:#ef4444; }
-#hop-toast {
-  position:fixed; bottom:80px; right:24px; z-index:999;
-  background:rgba(168,85,247,0.15); border:1px solid rgba(168,85,247,0.4);
-  backdrop-filter:blur(16px); border-radius:14px;
-  padding:14px 20px; display:flex; align-items:center; gap:12px;
-  transform:translateX(120%); transition:transform .4s cubic-bezier(.34,1.56,.64,1);
-  pointer-events:none;
+.toast.show { transform:translateX(0); opacity:1; }
+.toast-bar {
+  position:absolute; left:0; top:0; bottom:0; width:3px;
+  border-radius:16px 0 0 16px;
 }
-#hop-toast.show { transform:translateX(0); }
-#hop-toast .toast-icon { font-size:20px; }
-#hop-toast .toast-text { font-size:12px; color:var(--text); }
+#spike-toast { bottom:24px; border:1px solid rgba(239,68,68,.3); }
+#spike-toast .toast-bar { background:#ef4444; box-shadow:0 0 14px rgba(239,68,68,.7); }
+#hop-toast   { bottom:96px; border:1px solid rgba(168,85,247,.3); }
+#hop-toast   .toast-bar { background:#a855f7; box-shadow:0 0 14px rgba(168,85,247,.7); }
+.toast-icon { font-size:20px; flex-shrink:0; line-height:1; }
+.toast-body { display:flex; flex-direction:column; gap:1px; }
+.toast-label { font-size:9px; font-weight:700; letter-spacing:.09em; color:rgba(255,255,255,.38); }
+.toast-val   { font-size:20px; font-weight:800; line-height:1.15; }
+.toast-sub   { font-size:10px; color:rgba(255,255,255,.38); margin-top:1px; }
+#spike-toast .toast-val { color:#ef4444; text-shadow:0 0 22px rgba(239,68,68,.55); }
+#hop-toast   .toast-val { color:#a855f7; text-shadow:0 0 22px rgba(168,85,247,.55); font-size:12px; font-weight:700; }
+
 .card {
   background:var(--glass); backdrop-filter:blur(var(--blur));
   -webkit-backdrop-filter:blur(var(--blur));
@@ -946,7 +955,6 @@ function confirmEvent() {
   ws.send(JSON.stringify({type:'add_event', label}));
   closeEventModal();
 }
-// Enter-Taste im Input
 document.addEventListener('keydown', e => {
   if (e.key === 'Enter' && document.getElementById('event-modal').classList.contains('show'))
     confirmEvent();
@@ -1052,7 +1060,7 @@ function showHopToast(hopCount){
   hopToastTimer=setTimeout(()=>t.classList.remove('show'),5000);
 }
 
-// ── Event Ack Toast (reuse hop toast color) ─────────────────────────────────
+// ── Event Ack Toast ─────────────────────────────────────────────────────────
 function showEventToast(label){
   document.getElementById('hop-toast-text').textContent=`Event marked: ${label}`;
   const t=document.getElementById('hop-toast');
@@ -1061,18 +1069,24 @@ function showEventToast(label){
 }
 </script>
 
-<div id="spike-toast">
+<!-- Spike Toast -->
+<div id="spike-toast" class="toast">
+  <div class="toast-bar"></div>
   <div class="toast-icon">⚡</div>
-  <div>
-    <div class="toast-text">PING SPIKE DETECTED</div>
+  <div class="toast-body">
+    <div class="toast-label">SPIKE DETECTED</div>
     <div class="toast-val" id="toast-val">— ms</div>
+    <div class="toast-sub">latency spike</div>
   </div>
 </div>
 
-<div id="hop-toast">
+<!-- Hop / Event Toast -->
+<div id="hop-toast" class="toast">
+  <div class="toast-bar"></div>
   <div class="toast-icon">🔀</div>
-  <div>
-    <div class="toast-text" id="hop-toast-text">Route changed</div>
+  <div class="toast-body">
+    <div class="toast-label">NETWORK EVENT</div>
+    <div class="toast-val" id="hop-toast-text">Route changed</div>
   </div>
 </div>
 
