@@ -6,7 +6,7 @@ const fs = require('fs')
 let win = null
 let tray = null
 let backend = null
-let useTray = true   // controlled by settings toggle
+let useTray = true
 let isQuitting = false
 
 // ─── Backend ────────────────────────────────────────────────────────────────
@@ -25,13 +25,11 @@ function startBackend() {
   backend.on('close',  code => console.log('[backend] exited', code))
 }
 
-
-// ─── Kill backend completely ─────────────────────────────────────────────────
+// ─── Kill backend ────────────────────────────────────────────────────────────
 function killBackend() {
   if (!backend) return
   try {
     if (process.platform === 'win32') {
-      // taskkill ensures child processes (pyinstaller bootloader etc.) are also killed
       const { execSync } = require('child_process')
       try { execSync(`taskkill /PID ${backend.pid} /T /F`, { windowsHide: true }) } catch(e) {}
     }
@@ -54,10 +52,10 @@ function buildRoundedShape(w, h, r) {
     const oy = r - Math.round(r * Math.sin(a2))
     const sw = r - ox
     if (sw < 1) continue
-    rects.push({ x: ox,       y: oy,       width: sw, height: 1 })  // TL
-    rects.push({ x: w-ox-sw,  y: oy,       width: sw, height: 1 })  // TR
-    rects.push({ x: ox,       y: h-oy-1,   width: sw, height: 1 })  // BL
-    rects.push({ x: w-ox-sw,  y: h-oy-1,   width: sw, height: 1 })  // BR
+    rects.push({ x: ox,       y: oy,       width: sw, height: 1 })
+    rects.push({ x: w-ox-sw,  y: oy,       width: sw, height: 1 })
+    rects.push({ x: ox,       y: h-oy-1,   width: sw, height: 1 })
+    rects.push({ x: w-ox-sw,  y: h-oy-1,   width: sw, height: 1 })
   }
   return rects
 }
@@ -74,28 +72,47 @@ function applyRoundedShape() {
 function getTrayIcon() {
   const base = app.isPackaged ? process.resourcesPath : __dirname
   const candidates = [
-    path.join(base, 'assets', 'icon.ico'),
     path.join(base, 'assets', 'icon.png'),
-    path.join(base, 'assets', 'tray_32.png'),
-    path.join(base, 'assets', 'tray_16.png'),
+    path.join(base, 'assets', 'icon.ico'),
   ]
   for (const p of candidates) {
     if (fs.existsSync(p)) {
-      console.log('[tray] using icon:', p)
-      const img = nativeImage.createFromPath(p)
-      if (!img.isEmpty()) return img
+      console.log('[tray] trying icon:', p)
+      try {
+        let img = nativeImage.createFromPath(p)
+        if (!img.isEmpty()) {
+          img = img.resize({ width: 16, height: 16, quality: 'best' })
+          console.log('[tray] icon loaded, size:', img.getSize())
+          return img
+        } else {
+          console.warn('[tray] icon isEmpty:', p)
+        }
+      } catch(e) {
+        console.error('[tray] failed to load icon:', e.message)
+      }
+    } else {
+      console.warn('[tray] not found:', p)
     }
   }
-  console.warn('[tray] no icon found, using empty')
-  return nativeImage.createEmpty()
+  // Fallback: generate a simple white 16x16 icon
+  console.warn('[tray] using generated fallback icon')
+  const size = 16
+  const buf = Buffer.alloc(size * size * 4)
+  for (let i = 0; i < size * size; i++) {
+    buf[i * 4 + 0] = 255
+    buf[i * 4 + 1] = 255
+    buf[i * 4 + 2] = 255
+    buf[i * 4 + 3] = 255
+  }
+  return nativeImage.createFromBuffer(buf, { width: size, height: size })
 }
 
 function buildTrayMenu() {
   return Menu.buildFromTemplate([
     { label: 'WWM Monitor', enabled: false },
     { type: 'separator' },
-    { label: 'Anzeigen',    click: () => { if (win) { win.show(); win.focus(); applyRoundedShape() } } },
-    { label: 'Verstecken',  click: () => { if (win) win.hide() } },
+    { label: 'Anzeigen',   click: () => { if (win) { win.show(); win.focus(); applyRoundedShape() } } },
+    { label: 'Verstecken', click: () => { if (win) win.hide() } },
     { type: 'separator' },
     { label: 'Beenden', click: () => {
         isQuitting = true
@@ -108,7 +125,7 @@ function buildTrayMenu() {
 }
 
 function createTray() {
-  if (tray) return   // already exists
+  if (tray) return
   try {
     tray = new Tray(getTrayIcon())
     tray.setToolTip('WWM Monitor')
@@ -116,9 +133,9 @@ function createTray() {
     tray.on('double-click', () => {
       if (win) { win.show(); win.focus(); applyRoundedShape() }
     })
-    console.log('[tray] created')
+    console.log('[tray] created successfully')
   } catch(e) {
-    console.error('[tray] error:', e.message)
+    console.error('[tray] error creating tray:', e.message)
     tray = null
   }
 }
@@ -153,12 +170,11 @@ function createWindow() {
   win.on('resize', applyRoundedShape)
 
   win.on('close', (e) => {
-    if (isQuitting) return   // real quit from tray menu
+    if (isQuitting) return
     if (useTray && tray) {
       e.preventDefault()
       win.hide()
     }
-    // if useTray=false or no tray: normal close → app quits via window-all-closed
   })
 }
 
@@ -178,7 +194,7 @@ app.on('window-all-closed', () => {
 })
 
 // ─── IPC ─────────────────────────────────────────────────────────────────────
-ipcMain.on('minimize',    () => { if (win) win.minimize() })
+ipcMain.on('minimize', () => { if (win) win.minimize() })
 
 ipcMain.on('close', () => {
   if (useTray && tray) {
