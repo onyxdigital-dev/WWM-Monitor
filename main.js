@@ -287,7 +287,6 @@ function createWindow() {
     useTray = cfg.tray !== false
     createTray()
     win.show()
-    win.maximize()
     initUpdater()
   })
 
