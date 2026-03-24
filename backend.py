@@ -144,8 +144,10 @@ def find_server_ip(pid):
 def get_router_ip():
     try:
         out=subprocess.check_output(['ipconfig'],creationflags=0x08000000).decode('cp850',errors='ignore')
-        m=re.search(r'(?:Standardgateway|Standard-Gateway|Default Gateway)[^\d]*([\d.]+)',out)
-        if m and m.group(1)!='0.0.0.0':return m.group(1)
+        gw_section=re.search(r'Standardgateway[^:]*:(.*?)(?:\r?\n\S|\Z)',out,re.DOTALL)
+        if gw_section:
+            ipv4=re.search(r'(\d{1,3}(?:\.\d{1,3}){3})',gw_section.group(1))
+            if ipv4 and ipv4.group(1)!='0.0.0.0':return ipv4.group(1)
     except:pass
     return None
 
@@ -161,6 +163,7 @@ def ping_once(ip):
             stderr=subprocess.DEVNULL,creationflags=0x08000000).decode('cp850',errors='ignore')
         m=re.search(r'(?:Zeit|time)[=<](\d+)\s*ms',out,re.IGNORECASE)
         if m:return int(m.group(1))
+        if re.search(r'(?:Zeit|time)<1ms',out,re.IGNORECASE):return 1
     except:pass
     return None
 
@@ -232,10 +235,12 @@ def monitor_loop():
 
             # Dual-Ping: router + 8.8.8.8 parallel
             r_ms=[None]; d_ms=[None]
-            def ping_router():
-                if router_ip: r_ms[0]=ping_once(router_ip)
+            _rip=s.get('router_ip') or get_router_ip()
+            if _rip: s['router_ip']=_rip
+            def ping_router(_ip=_rip):
+                if _ip: r_ms[0]=ping_once(_ip)
             def ping_dns():
-                d_ms[0]=ping_once('8.8.8.8')
+                 d_ms[0]=ping_once('8.8.8.8')
             t1=threading.Thread(target=ping_router,daemon=True)
             t2=threading.Thread(target=ping_dns,daemon=True)
             t1.start();t2.start()
