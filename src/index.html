@@ -195,6 +195,23 @@ tbody td:first-child { color:var(--text); font-family:'Consolas',monospace; font
 .orb2 { width:300px; height:300px; background:rgba(255,255,255,.04); bottom:0; right:80px; }
 @keyframes fadeIn { from{opacity:0;transform:translateY(5px)} to{opacity:1;transform:none} }
 .fade-in { animation:fadeIn .3s ease forwards; }
+#event-modal {
+  display:none; position:fixed; inset:0; z-index:9999;
+  background:rgba(0,0,0,0.6); backdrop-filter:blur(8px);
+  align-items:center; justify-content:center;
+}
+#event-modal.show { display:flex; }
+#event-modal-box {
+  background:#111; border:1px solid rgba(255,255,255,0.15);
+  border-radius:14px; padding:24px; width:300px; display:flex;
+  flex-direction:column; gap:12px;
+}
+#event-modal-input {
+  background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.15);
+  border-radius:8px; padding:9px 12px; color:white; font-size:13px;
+  font-family:inherit; outline:none; width:100%;
+}
+
 </style>
 </head>
 <body>
@@ -916,11 +933,26 @@ function updateSwitches(rows){
 }
 
 // ── Events ─────────────────────────────────────────────────────────────────
-function markEvent(){
-  if(!ws||ws.readyState!==1)return;
-  const label=prompt('Event Label:','Round Start')||'Round Start';
-  ws.send(JSON.stringify({type:'add_event',label}));
+function markEvent() {
+  document.getElementById('event-modal').classList.add('show');
+  setTimeout(()=>document.getElementById('event-modal-input').focus(),50);
 }
+function closeEventModal() {
+  document.getElementById('event-modal').classList.remove('show');
+}
+function confirmEvent() {
+  const label = document.getElementById('event-modal-input').value.trim() || 'Round Start';
+  if (!ws || ws.readyState !== 1) { closeEventModal(); return; }
+  ws.send(JSON.stringify({type:'add_event', label}));
+  closeEventModal();
+}
+// Enter-Taste im Input
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && document.getElementById('event-modal').classList.contains('show'))
+    confirmEvent();
+  if (e.key === 'Escape' && document.getElementById('event-modal').classList.contains('show'))
+    closeEventModal();
+});
 
 function updateEvents(rows){
   const tbody=document.getElementById('events-tbody');
@@ -1041,6 +1073,17 @@ function showEventToast(label){
   <div class="toast-icon">🔀</div>
   <div>
     <div class="toast-text" id="hop-toast-text">Route changed</div>
+  </div>
+</div>
+
+<div id="event-modal" class="no-drag">
+  <div id="event-modal-box">
+    <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.5);letter-spacing:.08em;">EVENT LABEL</div>
+    <input id="event-modal-input" class="no-drag" type="text" value="Round Start" maxlength="40"/>
+    <div style="display:flex;gap:8px;">
+      <button class="event-btn no-drag" style="flex:1;" onclick="confirmEvent()">⚑ MARK</button>
+      <button class="export-btn no-drag" style="flex:1;" onclick="closeEventModal()">CANCEL</button>
+    </div>
   </div>
 </div>
 
