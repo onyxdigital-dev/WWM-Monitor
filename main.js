@@ -9,6 +9,30 @@ let backend = null
 let useTray = true
 let isQuitting = false
 
+// ─── Settings ────────────────────────────────────────────────────────────
+const SETTINGS_DEFAULTS = { startup: false, tray: true, notify: true, spikeMs: 150, lossPct: 5 }
+
+function getSettingsPath() {
+  return path.join(app.getPath('userData'), 'settings.json')
+}
+
+function loadSettings() {
+  try {
+    const raw = fs.readFileSync(getSettingsPath(), 'utf-8')
+    return Object.assign({}, SETTINGS_DEFAULTS, JSON.parse(raw))
+  } catch(e) {
+    return Object.assign({}, SETTINGS_DEFAULTS)
+  }
+}
+
+function saveSettings(cfg) {
+  try {
+    fs.writeFileSync(getSettingsPath(), JSON.stringify(cfg, null, 2), 'utf-8')
+  } catch(e) {
+    console.error('[settings] save error:', e.message)
+  }
+}
+
 // ─── Backend ────────────────────────────────────────────────────────────────
 function startBackend() {
   const exe = app.isPackaged
@@ -162,6 +186,9 @@ function createWindow() {
   win.loadFile(path.join(__dirname, 'src', 'index.html'))
 
   win.once('ready-to-show', () => {
+    // Apply saved tray setting before showing
+    const cfg = loadSettings()
+    useTray = cfg.tray !== false
     createTray()
     applyRoundedShape()
     win.show()
@@ -218,4 +245,14 @@ ipcMain.on('set-startup', (_, enable) => {
 
 ipcMain.handle('get-startup', () => {
   return app.getLoginItemSettings().openAtLogin
+})
+
+ipcMain.handle('get-settings', () => {
+  return loadSettings()
+})
+
+ipcMain.handle('save-settings', (_, cfg) => {
+  saveSettings(cfg)
+  useTray = cfg.tray !== false
+  return true
 })
