@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body {
+  width:100%; height:100%;
+  background:transparent !important;
+  overflow:hidden;
+  -webkit-app-region:drag;
+  user-select:none;
+  font-family:'Segoe UI',system-ui,sans-serif;
+}
+#wrap {
+  width:100%; height:100%;
+  background:rgba(8,8,8,0.78);
+  backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,0.10);
+  box-shadow:0 4px 24px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.07);
+  display:flex; align-items:center; gap:10px;
+  padding:0 14px;
+  position:relative;
+  overflow:hidden;
+}
+#accent {
+  position:absolute; left:0; top:0; bottom:0; width:3px;
+  border-radius:12px 0 0 12px;
+  background:#22c55e;
+  box-shadow:0 0 10px rgba(34,197,94,0.7);
+  transition:background .3s, box-shadow .3s;
+}
+#label {
+  font-size:8px; font-weight:700; letter-spacing:.09em;
+  color:rgba(255,255,255,.35);
+  line-height:1;
+}
+#ping {
+  font-size:26px; font-weight:800; line-height:1;
+  color:white;
+  transition:color .3s, text-shadow .3s;
+  min-width:48px; text-align:right;
+}
+#unit {
+  font-size:10px; color:rgba(255,255,255,.35);
+  font-weight:700; align-self:flex-end; padding-bottom:3px;
+}
+#close {
+  position:absolute; top:5px; right:7px;
+  font-size:10px; color:rgba(255,255,255,.25);
+  cursor:pointer; -webkit-app-region:no-drag;
+  line-height:1; transition:color .2s;
+}
+#close:hover { color:rgba(239,68,68,.8); }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="accent"></div>
+  <div>
+    <div id="label">PING</div>
+  </div>
+  <div id="ping">--</div>
+  <div id="unit">ms</div>
+  <div id="close" onclick="closeOverlay()">✕</div>
+</div>
+<script>
+const { ipcRenderer } = require('electron');
+
+function closeOverlay() {
+  ipcRenderer.send('overlay-close');
+}
+
+ipcRenderer.on('ping-update', (_, data) => {
+  const ping = document.getElementById('ping');
+  const accent = document.getElementById('accent');
+  const unit = document.getElementById('unit');
+
+  if (data.ms === null || data.ms === undefined) {
+    ping.textContent = 'OUT';
+    ping.style.color = '#ef4444';
+    ping.style.textShadow = '0 0 20px rgba(239,68,68,.6)';
+    accent.style.background = '#ef4444';
+    accent.style.boxShadow = '0 0 10px rgba(239,68,68,.7)';
+    unit.style.display = 'none';
+  } else {
+    ping.textContent = data.ms;
+    unit.style.display = '';
+    if (data.ms >= 150) {
+      ping.style.color = '#ef4444';
+      ping.style.textShadow = '0 0 20px rgba(239,68,68,.6)';
+      accent.style.background = '#ef4444';
+      accent.style.boxShadow = '0 0 10px rgba(239,68,68,.7)';
+    } else if (data.ms >= 80) {
+      ping.style.color = '#f59e0b';
+      ping.style.textShadow = '0 0 20px rgba(245,158,11,.5)';
+      accent.style.background = '#f59e0b';
+      accent.style.boxShadow = '0 0 10px rgba(245,158,11,.7)';
+    } else {
+      ping.style.color = 'white';
+      ping.style.textShadow = 'none';
+      accent.style.background = '#22c55e';
+      accent.style.boxShadow = '0 0 10px rgba(34,197,94,.7)';
+    }
+  }
+});
+</script>
+</body>
+</html>
