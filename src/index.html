@@ -208,7 +208,7 @@ body {
 .badge {
   padding:5px 11px; border-radius:7px;
   font-family:'Consolas',monospace; font-size:12px; font-weight:700;
-  backdrop-filter:blur(8px); cursor:default; transition:transform .15s;
+  backdrop-filter:blur(8px); cursor:default; transition:transform .15px;
 }
 .badge:hover { transform:translateY(-1px); }
 .badge-ok   { background:rgba(34,197,94,.12);  border:1px solid rgba(34,197,94,.3);  color:#22c55e; }
@@ -580,6 +580,9 @@ function updateLive(d) {
   graphHistory=d.history||[];
   drawGraph();
   updateMap(d);
+
+  // spike check
+  if (ms !== null && ms !== undefined) checkSpike(ms);
 }
 
 // ── Graph ──────────────────────────────────────────────────────────────────
@@ -637,7 +640,6 @@ let mapAnimFrame = null;
 let mapPulse = 0;
 let worldPolygons = null;
 
-// Viewport state
 let view = { x: 0, y: 0, scale: 1 };
 let isDragging = false, dragStart = null, viewAtDrag = null;
 const MIN_SCALE = 0.8, MAX_SCALE = 12;
@@ -681,7 +683,6 @@ function worldToCanvas(lon, lat) {
   return [bx * view.scale + view.x, by * view.scale + view.y];
 }
 
-// Map base dimensions: 2:1 aspect ratio (equirectangular world)
 const MAP_W = 1000, MAP_H = 500;
 
 function drawMapCanvas() {
@@ -692,7 +693,6 @@ function drawMapCanvas() {
   if (canvas.width !== W || canvas.height !== H) {
     canvas.width = W; canvas.height = H;
     if (view.x === 0 && view.y === 0 && view.scale === 1) {
-      // Fit map height to canvas height, center horizontally
       view.scale = H / MAP_H;
       view.x = (W - MAP_W * view.scale) / 2;
       view.y = 0;
@@ -703,7 +703,6 @@ function drawMapCanvas() {
   ctx.fillStyle = '#0a0a0a';
   ctx.fillRect(0, 0, W, H);
 
-  // Grid
   ctx.setLineDash([2, 8]);
   ctx.lineWidth = 0.5;
   ctx.strokeStyle = 'rgba(255,255,255,0.05)';
@@ -717,7 +716,6 @@ function drawMapCanvas() {
   }
   ctx.setLineDash([]);
 
-  // Continents
   if (worldPolygons) {
     ctx.fillStyle = 'rgba(255,255,255,0.08)';
     ctx.strokeStyle = 'rgba(255,255,255,0.22)';
@@ -774,7 +772,6 @@ function animateMap() {
 function clampView(W, H) {
   const mapW = W * view.scale;
   const mapH = H * view.scale;
-  // Allow some overflow but not too much
   view.x = Math.min(W * 0.5, Math.max(W - mapW - W * 0.5, view.x));
   view.y = Math.min(H * 0.5, Math.max(H - mapH - H * 0.5, view.y));
 }
@@ -783,7 +780,6 @@ function initMapInteraction() {
   const canvas = getCanvas();
   if (!canvas) return;
 
-  // Zoom on scroll
   canvas.addEventListener('wheel', (e) => {
     e.preventDefault();
     const rect = canvas.getBoundingClientRect();
@@ -791,14 +787,12 @@ function initMapInteraction() {
     const my = e.clientY - rect.top;
     const delta = e.deltaY > 0 ? 0.85 : 1.18;
     const newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, view.scale * delta));
-    // Zoom toward mouse
     view.x = mx - (mx - view.x) * (newScale / view.scale);
     view.y = my - (my - view.y) * (newScale / view.scale);
     view.scale = newScale;
     clampView(canvas.width, canvas.height);
   }, { passive: false });
 
-  // Pan on drag
   canvas.addEventListener('mousedown', (e) => {
     isDragging = true;
     dragStart = { x: e.clientX, y: e.clientY };
@@ -815,7 +809,6 @@ function initMapInteraction() {
     if (getCanvas()) getCanvas().style.cursor = 'grab';
   });
 
-  // Double-click: zoom to server
   canvas.addEventListener('dblclick', () => {
     if (!serverLatLon) return;
     const W = canvas.width, H = canvas.height;
@@ -828,7 +821,6 @@ function initMapInteraction() {
 
   canvas.style.cursor = 'grab';
 
-  // Zoom-in / Zoom-out buttons (inject)
   const wrap = canvas.parentElement;
   if (!document.getElementById('zoom-in')) {
     const zoomDiv = document.createElement('div');
@@ -859,13 +851,10 @@ function zoomReset() {
   view.y = 0;
 }
 
-
 function loadWorldMap() {
   fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json')
     .then(r => r.json())
-    .then(topo => {
-      worldPolygons = decodeTopo(topo);
-    }).catch(() => {});
+    .then(topo => { worldPolygons = decodeTopo(topo); }).catch(() => {});
 }
 
 function updateMap(d) {
@@ -892,6 +881,7 @@ window.addEventListener('load', () => {
   loadWorldMap();
   initMapInteraction();
   animateMap();
+  loadSettings();
   window.addEventListener('resize', () => { const c=getCanvas(); if(c){view.scale=c.offsetHeight/MAP_H; view.x=(c.offsetWidth-MAP_W*view.scale)/2; view.y=0;} drawMapCanvas(); });
 });
 
@@ -923,35 +913,48 @@ function updateDash(rows,stats) {
   });
 }
 
-// Settings
+// ── Settings (persistent via IPC → userData/settings.json) ────────────────
 let cfg = { startup:false, tray:true, notify:true, spikeMs:150, lossPct:5 };
+
+function applySettingsToUI() {
+  document.getElementById('s-startup').checked = cfg.startup||false;
+  document.getElementById('s-tray').checked    = cfg.tray!==false;
+  document.getElementById('s-notify').checked  = cfg.notify!==false;
+  document.getElementById('s-spike').value     = cfg.spikeMs||150;
+  document.getElementById('lbl-spike').textContent = (cfg.spikeMs||150)+' ms';
+  document.getElementById('s-loss').value      = cfg.lossPct||5;
+  document.getElementById('lbl-loss').textContent  = (cfg.lossPct||5)+' %';
+}
+
 function saveSetting(k,v) {
   cfg[k]=v;
-  localStorage.setItem('wwm-cfg', JSON.stringify(cfg));
+  if(window.electronAPI && window.electronAPI.saveSettings) {
+    window.electronAPI.saveSettings(cfg);
+  }
   if(k==='startup' && window.electronAPI) window.electronAPI.send('set-startup', v);
   if(k==='tray'    && window.electronAPI) window.electronAPI.send('set-tray', v);
 }
+
 function loadSettings() {
-  try { const s=localStorage.getItem('wwm-cfg'); if(s) cfg=JSON.parse(s); } catch(e){}
-  // Sync tray setting to main process
-  if(window.electronAPI) window.electronAPI.send('set-tray', cfg.tray !== false);
-  // Sync real system startup state
+  if(window.electronAPI && window.electronAPI.getSettings) {
+    window.electronAPI.getSettings().then(saved => {
+      cfg = Object.assign(cfg, saved);
+      applySettingsToUI();
+      window.electronAPI.send('set-tray', cfg.tray !== false);
+    });
+  } else {
+    applySettingsToUI();
+  }
+  // sync real system startup state
   if(window.electronAPI && window.electronAPI.getStartup) {
     window.electronAPI.getStartup().then(v => {
       cfg.startup = v;
       document.getElementById('s-startup').checked = v;
     });
   }
-  document.getElementById('s-startup').checked = cfg.startup||false;
-  document.getElementById('s-tray').checked = cfg.tray!==false;
-  document.getElementById('s-notify').checked = cfg.notify!==false;
-  document.getElementById('s-spike').value = cfg.spikeMs||150;
-  document.getElementById('lbl-spike').textContent = (cfg.spikeMs||150)+' ms';
-  document.getElementById('s-loss').value = cfg.lossPct||5;
-  document.getElementById('lbl-loss').textContent = (cfg.lossPct||5)+' %';
 }
 
-// Spike toast
+// ── Spike toast ────────────────────────────────────────────────────────────
 let toastTimer = null;
 function showSpikeToast(ms) {
   if(!cfg.notify) return;
@@ -962,14 +965,11 @@ function showSpikeToast(ms) {
   toastTimer = setTimeout(()=>t.classList.remove('show'), 4000);
 }
 
-// Hook into data feed to detect spikes
-const _origRender = typeof renderData === 'function' ? renderData : null;
 let _lastPing = 0;
 function checkSpike(ping) {
   if(ping > (cfg.spikeMs||150) && _lastPing <= (cfg.spikeMs||150)) showSpikeToast(ping);
   _lastPing = ping;
 }
-
 </script>
 
 <div id="spike-toast">
