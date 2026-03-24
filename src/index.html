@@ -44,7 +44,6 @@ body {
 .scrollable::-webkit-scrollbar { width:4px; }
 .scrollable::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.12); border-radius:2px; }
 
-
 /* Toggle switch */
 .toggle { position:relative; display:inline-block; width:42px; height:24px; cursor:pointer; }
 .toggle input { opacity:0; width:0; height:0; }
@@ -112,12 +111,6 @@ body {
   padding:0 18px; height:54px; flex-shrink:0;
   background:rgba(255,255,255,0.03);
   border-bottom:1px solid var(--border);
-}
-.logo-mark {
-  width:30px; height:30px; background:rgba(255,255,255,0.1);
-  border:1px solid rgba(255,255,255,0.2); border-radius:7px;
-  display:flex; align-items:center; justify-content:center;
-  font-weight:800; font-size:13px; color:white; margin-right:9px; flex-shrink:0;
 }
 .logo-text { font-size:14px; font-weight:700; color:white; }
 .logo-sub  { font-size:14px; color:var(--muted); margin-left:4px; }
@@ -208,7 +201,7 @@ body {
 .badge {
   padding:5px 11px; border-radius:7px;
   font-family:'Consolas',monospace; font-size:12px; font-weight:700;
-  backdrop-filter:blur(8px); cursor:default; transition:transform .15px;
+  backdrop-filter:blur(8px); cursor:default; transition:transform .15s;
 }
 .badge:hover { transform:translateY(-1px); }
 .badge-ok   { background:rgba(34,197,94,.12);  border:1px solid rgba(34,197,94,.3);  color:#22c55e; }
@@ -223,7 +216,6 @@ body {
 .geo-val { font-size:12px; color:var(--text); margin-top:3px; line-height:1.3; }
 .map-wrap { flex:1; border-radius:var(--radius); overflow:hidden; position:relative; border:1px solid var(--border); }
 #map-canvas { width:100%; height:100%; display:block; }
-
 .map-badge {
   position:absolute; bottom:10px; left:10px; z-index:500;
   background:rgba(8,8,8,.75); backdrop-filter:blur(12px);
@@ -273,7 +265,7 @@ tbody td:first-child { color:var(--text); font-family:'Consolas',monospace; font
     <nav class="nav no-drag">
       <button class="nav-btn active" onclick="switchTab('live')">LIVE</button>
       <button class="nav-btn"        onclick="switchTab('dash')">DASHBOARD</button>
-    <button class="nav-btn no-drag" onclick="switchTab('settings')">SETTINGS</button>
+      <button class="nav-btn no-drag" onclick="switchTab('settings')">SETTINGS</button>
     </nav>
     <div class="status-area">
       <div class="status-dot" id="status-dot"></div>
@@ -296,7 +288,11 @@ tbody td:first-child { color:var(--text); font-family:'Consolas',monospace; font
           <div class="info-cell"><div class="info-label">LOCATION</div><div class="info-value" id="i-loc">—</div></div>
           <div class="info-cell"><div class="info-label">ISP</div><div class="info-value" id="i-isp">—</div></div>
           <div class="info-cell"><div class="info-label">PROCESS</div><div class="info-value" id="i-proc">—</div></div>
-          <div class="info-cell"><div class="info-label">SESSION</div><div class="info-value" id="i-sess">—</div></div>
+          <div class="info-cell">
+            <div class="info-label">SESSION · CONNECTED FOR</div>
+            <div class="info-value" id="i-sess">—</div>
+            <div style="font-size:10px;color:#22c55e;margin-top:2px;" id="i-connected-since"></div>
+          </div>
         </div>
 
         <!-- Ping + Graph -->
@@ -375,6 +371,7 @@ tbody td:first-child { color:var(--text); font-family:'Consolas',monospace; font
             <div class="stat-tile"><div class="stat-val" id="d-sessions" style="color:rgba(255,255,255,.65)">—</div><div class="stat-lbl">SESSIONS</div></div>
           </div>
         </div>
+        <!-- Session History -->
         <div class="card table-card fade-in">
           <div class="sec-hdr"><div class="sec-bar"></div><div class="sec-title">SESSION HISTORY</div></div>
           <div class="table-scroll">
@@ -387,80 +384,95 @@ tbody td:first-child { color:var(--text); font-family:'Consolas',monospace; font
             </table>
           </div>
         </div>
-      </div>
-    </div>
-  
-<div id="page-settings" class="page">
-  <div style="flex:1;padding:24px;display:flex;flex-direction:column;gap:18px;overflow-y:auto;" class="scrollable">
-    <div class="card" style="padding:22px 24px;">
-      <div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.1em;margin-bottom:16px;">GENERAL</div>
-      <div style="display:flex;flex-direction:column;gap:14px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;">
-          <div>
-            <div style="font-size:13px;color:var(--text);">Start with Windows</div>
-            <div style="font-size:11px;color:var(--muted);margin-top:2px;">Launch automatically on startup</div>
+        <!-- Server Switch History -->
+        <div class="card table-card fade-in" style="min-height:180px;">
+          <div class="sec-hdr"><div class="sec-bar"></div><div class="sec-title">SERVER SWITCH HISTORY</div></div>
+          <div class="table-scroll">
+            <table>
+              <thead><tr>
+                <th>Time</th><th>From IP</th><th>To IP</th><th>Duration on old server</th><th>Session</th>
+              </tr></thead>
+              <tbody id="switch-tbody">
+                <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px;">No server switches recorded yet.</td></tr>
+              </tbody>
+            </table>
           </div>
-          <label class="toggle no-drag"><input type="checkbox" id="s-startup" onchange="saveSetting('startup',this.checked)"><span class="toggle-track"></span></label>
-        </div>
-        <div style="display:flex;align-items:center;justify-content:space-between;">
-          <div>
-            <div style="font-size:13px;color:var(--text);">Minimize to Tray</div>
-            <div style="font-size:11px;color:var(--muted);margin-top:2px;">Keep running in system tray</div>
-          </div>
-          <label class="toggle no-drag"><input type="checkbox" id="s-tray" checked onchange="saveSetting('tray',this.checked)"><span class="toggle-track"></span></label>
-        </div>
-        <div style="display:flex;align-items:center;justify-content:space-between;">
-          <div>
-            <div style="font-size:13px;color:var(--text);">Spike Notifications</div>
-            <div style="font-size:11px;color:var(--muted);margin-top:2px;">Alert when ping exceeds threshold</div>
-          </div>
-          <label class="toggle no-drag"><input type="checkbox" id="s-notify" checked onchange="saveSetting('notify',this.checked)"><span class="toggle-track"></span></label>
         </div>
       </div>
     </div>
 
-    <div class="card" style="padding:22px 24px;">
-      <div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.1em;margin-bottom:16px;">ALERT THRESHOLDS</div>
-      <div style="display:flex;flex-direction:column;gap:16px;">
-        <div>
-          <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
-            <span style="font-size:12px;color:var(--text);">Spike Warning</span>
-            <span style="font-size:12px;color:var(--muted2);" id="lbl-spike">150 ms</span>
+    <!-- SETTINGS PAGE -->
+    <div id="page-settings" class="page">
+      <div style="flex:1;padding:24px;display:flex;flex-direction:column;gap:18px;overflow-y:auto;" class="scrollable">
+        <div class="card" style="padding:22px 24px;">
+          <div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.1em;margin-bottom:16px;">GENERAL</div>
+          <div style="display:flex;flex-direction:column;gap:14px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <div>
+                <div style="font-size:13px;color:var(--text);">Start with Windows</div>
+                <div style="font-size:11px;color:var(--muted);margin-top:2px;">Launch automatically on startup</div>
+              </div>
+              <label class="toggle no-drag"><input type="checkbox" id="s-startup" onchange="saveSetting('startup',this.checked)"><span class="toggle-track"></span></label>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <div>
+                <div style="font-size:13px;color:var(--text);">Minimize to Tray</div>
+                <div style="font-size:11px;color:var(--muted);margin-top:2px;">Keep running in system tray</div>
+              </div>
+              <label class="toggle no-drag"><input type="checkbox" id="s-tray" checked onchange="saveSetting('tray',this.checked)"><span class="toggle-track"></span></label>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <div>
+                <div style="font-size:13px;color:var(--text);">Spike Notifications</div>
+                <div style="font-size:11px;color:var(--muted);margin-top:2px;">Alert when ping exceeds threshold</div>
+              </div>
+              <label class="toggle no-drag"><input type="checkbox" id="s-notify" checked onchange="saveSetting('notify',this.checked)"><span class="toggle-track"></span></label>
+            </div>
           </div>
-          <input type="range" class="slider no-drag" min="50" max="500" value="150" id="s-spike"
-            oninput="document.getElementById('lbl-spike').textContent=this.value+' ms';saveSetting('spikeMs',+this.value)">
         </div>
-        <div>
-          <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
-            <span style="font-size:12px;color:var(--text);">Packet Loss Warning</span>
-            <span style="font-size:12px;color:var(--muted2);" id="lbl-loss">5 %</span>
-          </div>
-          <input type="range" class="slider no-drag" min="1" max="50" value="5" id="s-loss"
-            oninput="document.getElementById('lbl-loss').textContent=this.value+' %';saveSetting('lossPct',+this.value)">
-        </div>
-      </div>
-    </div>
 
-    <div class="card" style="padding:22px 24px;">
-      <div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.1em;margin-bottom:16px;">ABOUT</div>
-      <div style="display:flex;flex-direction:column;gap:6px;">
-        <div style="display:flex;justify-content:space-between;">
-          <span style="font-size:12px;color:var(--muted);">Version</span>
-          <span style="font-size:12px;color:var(--text);">1.0.0</span>
+        <div class="card" style="padding:22px 24px;">
+          <div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.1em;margin-bottom:16px;">ALERT THRESHOLDS</div>
+          <div style="display:flex;flex-direction:column;gap:16px;">
+            <div>
+              <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+                <span style="font-size:12px;color:var(--text);">Spike Warning</span>
+                <span style="font-size:12px;color:var(--muted2);" id="lbl-spike">150 ms</span>
+              </div>
+              <input type="range" class="slider no-drag" min="50" max="500" value="150" id="s-spike"
+                oninput="document.getElementById('lbl-spike').textContent=this.value+' ms';saveSetting('spikeMs',+this.value)">
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+                <span style="font-size:12px;color:var(--text);">Packet Loss Warning</span>
+                <span style="font-size:12px;color:var(--muted2);" id="lbl-loss">5 %</span>
+              </div>
+              <input type="range" class="slider no-drag" min="1" max="50" value="5" id="s-loss"
+                oninput="document.getElementById('lbl-loss').textContent=this.value+' %';saveSetting('lossPct',+this.value)">
+            </div>
+          </div>
         </div>
-        <div style="display:flex;justify-content:space-between;">
-          <span style="font-size:12px;color:var(--muted);">Developer</span>
-          <span style="font-size:12px;color:var(--text);">Onyx Digital</span>
-        </div>
-        <div style="display:flex;justify-content:space-between;">
-          <span style="font-size:12px;color:var(--muted);">Backend</span>
-          <span style="font-size:12px;color:var(--text);">Python 3.14 / WebSocket</span>
+
+        <div class="card" style="padding:22px 24px;">
+          <div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.1em;margin-bottom:16px;">ABOUT</div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <div style="display:flex;justify-content:space-between;">
+              <span style="font-size:12px;color:var(--muted);">Version</span>
+              <span style="font-size:12px;color:var(--text);">1.0.0</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;">
+              <span style="font-size:12px;color:var(--muted);">Developer</span>
+              <span style="font-size:12px;color:var(--text);">Onyx Digital</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;">
+              <span style="font-size:12px;color:var(--muted);">Backend</span>
+              <span style="font-size:12px;color:var(--text);">Python 3.14 / WebSocket</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   </div>
-</div>
-</div>
 </div>
 
 <script>
@@ -476,6 +488,7 @@ function connect() {
     const msg = JSON.parse(data);
     if (msg.type==='state')    updateLive(msg.data);
     if (msg.type==='sessions') updateDash(msg.data, msg.stats);
+    if (msg.type==='switches') updateSwitches(msg.data);
   };
 }
 connect();
@@ -485,8 +498,10 @@ function switchTab(tab) {
     b.classList.toggle('active',(i===0&&tab==='live')||(i===1&&tab==='dash')||(i===2&&tab==='settings')));
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-'+tab).classList.add('active');
-  if (tab==='dash' && ws && ws.readyState===1)
+  if (tab==='dash' && ws && ws.readyState===1) {
     ws.send(JSON.stringify({type:'get_sessions'}));
+    ws.send(JSON.stringify({type:'get_switches'}));
+  }
 }
 
 function minimize() { if(window.electronAPI) window.electronAPI.minimize(); }
@@ -518,6 +533,17 @@ function updateLive(d) {
   document.getElementById('i-isp').textContent=d.geo_isp||'—';
   document.getElementById('i-proc').textContent=d.exe?`${d.exe} (${d.pid})`:'—';
   document.getElementById('i-sess').textContent=d.ts;
+
+  // Connected-for timer
+  if (d.connected_since) {
+    const diff = Math.floor((Date.now() - new Date(d.connected_since).getTime()) / 1000);
+    const h=Math.floor(diff/3600), m=Math.floor(diff%3600/60), s=diff%60;
+    const dur = h>0 ? `${h}h ${m}m ${s}s` : m>0 ? `${m}m ${s}s` : `${s}s`;
+    document.getElementById('i-connected-since').textContent =
+      new Date(d.connected_since).toLocaleTimeString('de-DE') + '  +' + dur;
+  } else {
+    document.getElementById('i-connected-since').textContent = '';
+  }
 
   const pn=document.getElementById('ping-num');
   const pill=document.getElementById('status-pill');
@@ -580,8 +606,6 @@ function updateLive(d) {
   graphHistory=d.history||[];
   drawGraph();
   updateMap(d);
-
-  // spike check
   if (ms !== null && ms !== undefined) checkSpike(ms);
 }
 
@@ -608,7 +632,6 @@ function drawGraph() {
   ctx.setLineDash([]);
 
   const pts=hist.map((v,i)=>({x:i*step+step/2, y:v!==null?yFor(v):H, v}));
-
   ctx.beginPath();
   ctx.moveTo(pts[0].x,H);
   pts.forEach(({x,y})=>ctx.lineTo(x,y));
@@ -633,261 +656,159 @@ function drawGraph() {
 }
 window.addEventListener('resize', drawGraph);
 
-// ── SVG World Map (zoomable/pannable) ─────────────────────────────────────
-let serverLatLon = null;
-let lastMappedIp = null;
-let mapAnimFrame = null;
-let mapPulse = 0;
-let worldPolygons = null;
-
-let view = { x: 0, y: 0, scale: 1 };
-let isDragging = false, dragStart = null, viewAtDrag = null;
-const MIN_SCALE = 0.8, MAX_SCALE = 12;
-
-function latLonToXY(lat, lon, W, H) {
-  return [(lon + 180) / 360 * W, (90 - lat) / 180 * H];
-}
+// ── World Map ──────────────────────────────────────────────────────────────
+let serverLatLon=null, lastMappedIp=null, mapAnimFrame=null, mapPulse=0, worldPolygons=null;
+let view={x:0,y:0,scale:1};
+let isDragging=false, dragStart=null, viewAtDrag=null;
+const MIN_SCALE=0.8, MAX_SCALE=12;
+const MAP_W=1000, MAP_H=500;
 
 function decodeTopo(topo) {
-  const arcs = topo.arcs;
-  const polygons = [];
-  const [sx, sy] = topo.transform.scale;
-  const [tx, ty] = topo.transform.translate;
-
+  const arcs=topo.arcs, polygons=[];
+  const [sx,sy]=topo.transform.scale, [tx,ty]=topo.transform.translate;
   function decodeArc(idx) {
-    const rev = idx < 0;
-    const arc = arcs[rev ? ~idx : idx];
-    let cx = 0, cy = 0;
-    const pts = arc.map(([dx, dy]) => { cx += dx; cy += dy; return [cx * sx + tx, cy * sy + ty]; });
-    if (rev) pts.reverse();
-    return pts;
+    const rev=idx<0, arc=arcs[rev?~idx:idx];
+    let cx=0,cy=0;
+    const pts=arc.map(([dx,dy])=>{cx+=dx;cy+=dy;return[cx*sx+tx,cy*sy+ty];});
+    if(rev)pts.reverse(); return pts;
   }
-
-  topo.objects.countries.geometries.forEach(geo => {
-    const collect = (arcsArr) => {
-      const ring = [];
-      arcsArr.forEach(idx => decodeArc(idx).forEach(p => ring.push(p)));
-      polygons.push(ring);
-    };
-    if (geo.type === 'Polygon') geo.arcs.forEach(collect);
-    else if (geo.type === 'MultiPolygon') geo.arcs.forEach(a => a.forEach(collect));
+  topo.objects.countries.geometries.forEach(geo=>{
+    const collect=(arcsArr)=>{ const ring=[]; arcsArr.forEach(idx=>decodeArc(idx).forEach(p=>ring.push(p))); polygons.push(ring); };
+    if(geo.type==='Polygon') geo.arcs.forEach(collect);
+    else if(geo.type==='MultiPolygon') geo.arcs.forEach(a=>a.forEach(collect));
   });
   return polygons;
 }
 
-function getCanvas() { return document.getElementById('map-canvas'); }
-
-function worldToCanvas(lon, lat) {
-  const bx = (lon + 180) / 360 * MAP_W;
-  const by = (90 - lat) / 180 * MAP_H;
-  return [bx * view.scale + view.x, by * view.scale + view.y];
+function getCanvas(){return document.getElementById('map-canvas');}
+function worldToCanvas(lon,lat){
+  const bx=(lon+180)/360*MAP_W, by=(90-lat)/180*MAP_H;
+  return[bx*view.scale+view.x, by*view.scale+view.y];
 }
-
-const MAP_W = 1000, MAP_H = 500;
 
 function drawMapCanvas() {
-  const canvas = getCanvas();
-  if (!canvas) return;
-  const W = canvas.offsetWidth || 800;
-  const H = canvas.offsetHeight || 220;
-  if (canvas.width !== W || canvas.height !== H) {
-    canvas.width = W; canvas.height = H;
-    if (view.x === 0 && view.y === 0 && view.scale === 1) {
-      view.scale = H / MAP_H;
-      view.x = (W - MAP_W * view.scale) / 2;
-      view.y = 0;
-    }
+  const canvas=getCanvas(); if(!canvas)return;
+  const W=canvas.offsetWidth||800, H=canvas.offsetHeight||220;
+  if(canvas.width!==W||canvas.height!==H){
+    canvas.width=W; canvas.height=H;
+    if(view.x===0&&view.y===0&&view.scale===1){view.scale=H/MAP_H;view.x=(W-MAP_W*view.scale)/2;view.y=0;}
   }
-  const ctx = canvas.getContext('2d');
-  ctx.clearRect(0, 0, W, H);
-  ctx.fillStyle = '#0a0a0a';
-  ctx.fillRect(0, 0, W, H);
-
-  ctx.setLineDash([2, 8]);
-  ctx.lineWidth = 0.5;
-  ctx.strokeStyle = 'rgba(255,255,255,0.05)';
-  for (let lon = -180; lon <= 180; lon += 30) {
-    const [x] = worldToCanvas(lon, 0);
-    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
-  }
-  for (let lat = -90; lat <= 90; lat += 30) {
-    const [, y] = worldToCanvas(0, lat);
-    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
-  }
+  const ctx=canvas.getContext('2d');
+  ctx.clearRect(0,0,W,H); ctx.fillStyle='#0a0a0a'; ctx.fillRect(0,0,W,H);
+  ctx.setLineDash([2,8]); ctx.lineWidth=0.5; ctx.strokeStyle='rgba(255,255,255,0.05)';
+  for(let lon=-180;lon<=180;lon+=30){const[x]=worldToCanvas(lon,0);ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+  for(let lat=-90;lat<=90;lat+=30){const[,y]=worldToCanvas(0,lat);ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
   ctx.setLineDash([]);
-
-  if (worldPolygons) {
-    ctx.fillStyle = 'rgba(255,255,255,0.08)';
-    ctx.strokeStyle = 'rgba(255,255,255,0.22)';
-    ctx.lineWidth = 0.7;
-    worldPolygons.forEach(ring => {
-      if (ring.length < 3) return;
+  if(worldPolygons){
+    ctx.fillStyle='rgba(255,255,255,0.08)'; ctx.strokeStyle='rgba(255,255,255,0.22)'; ctx.lineWidth=0.7;
+    worldPolygons.forEach(ring=>{
+      if(ring.length<3)return;
       ctx.beginPath();
-      ring.forEach(([lon, lat], i) => {
-        const [x, y] = worldToCanvas(lon, lat);
-        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-      });
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
+      ring.forEach(([lon,lat],i)=>{const[x,y]=worldToCanvas(lon,lat);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
+      ctx.closePath(); ctx.fill(); ctx.stroke();
     });
   }
-
-  if (serverLatLon) {
-    const [srvX, srvY] = worldToCanvas(serverLatLon[1], serverLatLon[0]);
-    const [youX, youY] = worldToCanvas(10, 51);
-
-    ctx.setLineDash([4, 6]);
-    ctx.strokeStyle = 'rgba(255,255,255,0.22)';
-    ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(youX, youY); ctx.lineTo(srvX, srvY); ctx.stroke();
-    ctx.setLineDash([]);
-
-    ctx.beginPath(); ctx.arc(youX, youY, 4, 0, Math.PI*2);
-    ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.fill();
-
-    const pulse = (mapPulse % 420) / 420;
-    ctx.beginPath(); ctx.arc(srvX, srvY, 7 + pulse * 22, 0, Math.PI*2);
-    ctx.strokeStyle = `rgba(255,255,255,${Math.pow(1-pulse, 2)*0.7})`; ctx.lineWidth = 1.5; ctx.stroke();
-
-    ctx.shadowBlur = 16; ctx.shadowColor = 'rgba(255,255,255,0.8)';
-    ctx.beginPath(); ctx.arc(srvX, srvY, 6, 0, Math.PI*2);
-    ctx.fillStyle = 'white'; ctx.fill();
-    ctx.shadowBlur = 0;
+  if(serverLatLon){
+    const[srvX,srvY]=worldToCanvas(serverLatLon[1],serverLatLon[0]);
+    const[youX,youY]=worldToCanvas(10,51);
+    ctx.setLineDash([4,6]); ctx.strokeStyle='rgba(255,255,255,0.22)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(youX,youY); ctx.lineTo(srvX,srvY); ctx.stroke(); ctx.setLineDash([]);
+    ctx.beginPath(); ctx.arc(youX,youY,4,0,Math.PI*2); ctx.fillStyle='rgba(255,255,255,0.45)'; ctx.fill();
+    const pulse=(mapPulse%420)/420;
+    ctx.beginPath(); ctx.arc(srvX,srvY,7+pulse*22,0,Math.PI*2);
+    ctx.strokeStyle=`rgba(255,255,255,${Math.pow(1-pulse,2)*0.7})`; ctx.lineWidth=1.5; ctx.stroke();
+    ctx.shadowBlur=16; ctx.shadowColor='rgba(255,255,255,0.8)';
+    ctx.beginPath(); ctx.arc(srvX,srvY,6,0,Math.PI*2); ctx.fillStyle='white'; ctx.fill(); ctx.shadowBlur=0;
   }
-
-  if (view.scale <= H / MAP_H * 1.1) {
-    ctx.fillStyle = 'rgba(255,255,255,0.15)';
-    ctx.font = '10px Segoe UI';
-    ctx.fillText('Scroll to zoom  ·  Drag to pan  ·  Dblclick → server', W/2 - 130, H - 10);
+  if(view.scale<=H/MAP_H*1.1){
+    ctx.fillStyle='rgba(255,255,255,0.15)'; ctx.font='10px Segoe UI';
+    ctx.fillText('Scroll to zoom  ·  Drag to pan  ·  Dblclick → server',W/2-130,H-10);
   }
 }
 
-function animateMap() {
-  mapPulse++;
-  drawMapCanvas();
-  mapAnimFrame = requestAnimationFrame(animateMap);
+function animateMap(){mapPulse++;drawMapCanvas();mapAnimFrame=requestAnimationFrame(animateMap);}
+function clampView(W,H){
+  const mapW=W*view.scale,mapH=H*view.scale;
+  view.x=Math.min(W*0.5,Math.max(W-mapW-W*0.5,view.x));
+  view.y=Math.min(H*0.5,Math.max(H-mapH-H*0.5,view.y));
 }
 
-function clampView(W, H) {
-  const mapW = W * view.scale;
-  const mapH = H * view.scale;
-  view.x = Math.min(W * 0.5, Math.max(W - mapW - W * 0.5, view.x));
-  view.y = Math.min(H * 0.5, Math.max(H - mapH - H * 0.5, view.y));
-}
-
-function initMapInteraction() {
-  const canvas = getCanvas();
-  if (!canvas) return;
-
-  canvas.addEventListener('wheel', (e) => {
+function initMapInteraction(){
+  const canvas=getCanvas(); if(!canvas)return;
+  canvas.addEventListener('wheel',(e)=>{
     e.preventDefault();
-    const rect = canvas.getBoundingClientRect();
-    const mx = e.clientX - rect.left;
-    const my = e.clientY - rect.top;
-    const delta = e.deltaY > 0 ? 0.85 : 1.18;
-    const newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, view.scale * delta));
-    view.x = mx - (mx - view.x) * (newScale / view.scale);
-    view.y = my - (my - view.y) * (newScale / view.scale);
-    view.scale = newScale;
-    clampView(canvas.width, canvas.height);
-  }, { passive: false });
-
-  canvas.addEventListener('mousedown', (e) => {
-    isDragging = true;
-    dragStart = { x: e.clientX, y: e.clientY };
-    viewAtDrag = { x: view.x, y: view.y };
-    canvas.style.cursor = 'grabbing';
+    const rect=canvas.getBoundingClientRect(),mx=e.clientX-rect.left,my=e.clientY-rect.top;
+    const delta=e.deltaY>0?0.85:1.18;
+    const newScale=Math.max(MIN_SCALE,Math.min(MAX_SCALE,view.scale*delta));
+    view.x=mx-(mx-view.x)*(newScale/view.scale);
+    view.y=my-(my-view.y)*(newScale/view.scale);
+    view.scale=newScale; clampView(canvas.width,canvas.height);
+  },{passive:false});
+  canvas.addEventListener('mousedown',(e)=>{isDragging=true;dragStart={x:e.clientX,y:e.clientY};viewAtDrag={x:view.x,y:view.y};canvas.style.cursor='grabbing';});
+  window.addEventListener('mousemove',(e)=>{if(!isDragging)return;view.x=viewAtDrag.x+(e.clientX-dragStart.x);view.y=viewAtDrag.y+(e.clientY-dragStart.y);});
+  window.addEventListener('mouseup',()=>{isDragging=false;if(getCanvas())getCanvas().style.cursor='grab';});
+  canvas.addEventListener('dblclick',()=>{
+    if(!serverLatLon)return;
+    const W=canvas.width,H=canvas.height;
+    const bx=(serverLatLon[1]+180)/360*MAP_W,by=(90-serverLatLon[0])/180*MAP_H;
+    view.scale=6;view.x=W/2-bx*view.scale;view.y=H/2-by*view.scale;
   });
-  window.addEventListener('mousemove', (e) => {
-    if (!isDragging) return;
-    view.x = viewAtDrag.x + (e.clientX - dragStart.x);
-    view.y = viewAtDrag.y + (e.clientY - dragStart.y);
-  });
-  window.addEventListener('mouseup', () => {
-    isDragging = false;
-    if (getCanvas()) getCanvas().style.cursor = 'grab';
-  });
-
-  canvas.addEventListener('dblclick', () => {
-    if (!serverLatLon) return;
-    const W = canvas.width, H = canvas.height;
-    const bx = (serverLatLon[1] + 180) / 360 * MAP_W;
-    const by = (90 - serverLatLon[0]) / 180 * MAP_H;
-    view.scale = 6;
-    view.x = W/2 - bx * view.scale;
-    view.y = H/2 - by * view.scale;
-  });
-
-  canvas.style.cursor = 'grab';
-
-  const wrap = canvas.parentElement;
-  if (!document.getElementById('zoom-in')) {
-    const zoomDiv = document.createElement('div');
-    zoomDiv.style.cssText = 'position:absolute;top:10px;right:10px;z-index:10;display:flex;flex-direction:column;gap:4px;';
-    zoomDiv.innerHTML = `
-      <button id="zoom-in"  onclick="zoomBtn(1.4)"  style="width:28px;height:28px;background:rgba(20,20,20,0.85);border:1px solid rgba(255,255,255,0.15);border-radius:7px;color:white;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;">+</button>
-      <button id="zoom-out" onclick="zoomBtn(0.7)"  style="width:28px;height:28px;background:rgba(20,20,20,0.85);border:1px solid rgba(255,255,255,0.15);border-radius:7px;color:white;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;">−</button>
-      <button id="zoom-rst" onclick="zoomReset()"   style="width:28px;height:28px;background:rgba(20,20,20,0.85);border:1px solid rgba(255,255,255,0.15);border-radius:7px;color:rgba(255,255,255,0.6);font-size:9px;cursor:pointer;font-family:inherit;font-weight:700;">RST</button>
+  canvas.style.cursor='grab';
+  const wrap=canvas.parentElement;
+  if(!document.getElementById('zoom-in')){
+    const zoomDiv=document.createElement('div');
+    zoomDiv.style.cssText='position:absolute;top:10px;right:10px;z-index:10;display:flex;flex-direction:column;gap:4px;';
+    zoomDiv.innerHTML=`
+      <button id="zoom-in" onclick="zoomBtn(1.4)" style="width:28px;height:28px;background:rgba(20,20,20,0.85);border:1px solid rgba(255,255,255,0.15);border-radius:7px;color:white;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;">+</button>
+      <button id="zoom-out" onclick="zoomBtn(0.7)" style="width:28px;height:28px;background:rgba(20,20,20,0.85);border:1px solid rgba(255,255,255,0.15);border-radius:7px;color:white;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;">−</button>
+      <button id="zoom-rst" onclick="zoomReset()" style="width:28px;height:28px;background:rgba(20,20,20,0.85);border:1px solid rgba(255,255,255,0.15);border-radius:7px;color:rgba(255,255,255,0.6);font-size:9px;cursor:pointer;font-family:inherit;font-weight:700;">RST</button>
     `;
     wrap.appendChild(zoomDiv);
   }
 }
 
-function zoomBtn(factor) {
-  const canvas = getCanvas();
-  const W = canvas.width, H = canvas.height;
-  const cx = W/2, cy = H/2;
-  const newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, view.scale * factor));
-  view.x = cx - (cx - view.x) * (newScale / view.scale);
-  view.y = cy - (cy - view.y) * (newScale / view.scale);
-  view.scale = newScale;
+function zoomBtn(factor){
+  const canvas=getCanvas(),W=canvas.width,H=canvas.height,cx=W/2,cy=H/2;
+  const newScale=Math.max(MIN_SCALE,Math.min(MAX_SCALE,view.scale*factor));
+  view.x=cx-(cx-view.x)*(newScale/view.scale);
+  view.y=cy-(cy-view.y)*(newScale/view.scale);
+  view.scale=newScale;
 }
-function zoomReset() {
-  const canvas = getCanvas();
-  const H = canvas ? canvas.height : 220;
-  view.scale = H / MAP_H;
-  view.x = (canvas.width - MAP_W * view.scale) / 2;
-  view.y = 0;
+function zoomReset(){
+  const canvas=getCanvas(),H=canvas?canvas.height:220;
+  view.scale=H/MAP_H;view.x=(canvas.width-MAP_W*view.scale)/2;view.y=0;
 }
 
-function loadWorldMap() {
+function loadWorldMap(){
   fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json')
-    .then(r => r.json())
-    .then(topo => { worldPolygons = decodeTopo(topo); }).catch(() => {});
+    .then(r=>r.json()).then(topo=>{worldPolygons=decodeTopo(topo);}).catch(()=>{});
 }
 
-function updateMap(d) {
-  document.getElementById('geo-country').textContent = d.geo_country || '—';
-  document.getElementById('geo-city').textContent    = d.geo_city    || '—';
-  document.getElementById('geo-isp').textContent     = d.geo_isp     || '—';
-  document.getElementById('geo-ip').textContent      = d.server_ip   || '—';
-  document.getElementById('geo-ping').textContent    = (d.last_ms !== null && d.last_ms !== undefined) ? d.last_ms + ' ms' : '— ms';
-
-  if (!d.server_ip || d.server_ip === lastMappedIp || (!d.geo_city && !d.geo_country)) return;
-  lastMappedIp = d.server_ip;
-  const label = [d.geo_city, d.geo_country].filter(Boolean).join(', ') || d.server_ip;
-  document.getElementById('map-label').textContent = label;
-
+function updateMap(d){
+  document.getElementById('geo-country').textContent=d.geo_country||'—';
+  document.getElementById('geo-city').textContent=d.geo_city||'—';
+  document.getElementById('geo-isp').textContent=d.geo_isp||'—';
+  document.getElementById('geo-ip').textContent=d.server_ip||'—';
+  document.getElementById('geo-ping').textContent=(d.last_ms!==null&&d.last_ms!==undefined)?d.last_ms+' ms':'— ms';
+  if(!d.server_ip||d.server_ip===lastMappedIp||(!d.geo_city&&!d.geo_country))return;
+  lastMappedIp=d.server_ip;
+  const label=[d.geo_city,d.geo_country].filter(Boolean).join(', ')||d.server_ip;
+  document.getElementById('map-label').textContent=label;
   fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(label)}&format=json&limit=1`)
-    .then(r => r.json())
-    .then(res => {
-      if (!res.length) return;
-      serverLatLon = [parseFloat(res[0].lat), parseFloat(res[0].lon)];
-    }).catch(() => {});
+    .then(r=>r.json()).then(res=>{if(!res.length)return;serverLatLon=[parseFloat(res[0].lat),parseFloat(res[0].lon)];}).catch(()=>{});
 }
 
-window.addEventListener('load', () => {
+window.addEventListener('load',()=>{
   loadWorldMap();
   initMapInteraction();
   animateMap();
   loadSettings();
-  window.addEventListener('resize', () => { const c=getCanvas(); if(c){view.scale=c.offsetHeight/MAP_H; view.x=(c.offsetWidth-MAP_W*view.scale)/2; view.y=0;} drawMapCanvas(); });
+  window.addEventListener('resize',()=>{const c=getCanvas();if(c){view.scale=c.offsetHeight/MAP_H;view.x=(c.offsetWidth-MAP_W*view.scale)/2;view.y=0;}drawMapCanvas();});
 });
 
 // ── Dashboard ──────────────────────────────────────────────────────────────
-function updateDash(rows,stats) {
-  if (stats&&stats.total) {
+function updateDash(rows,stats){
+  if(stats&&stats.total){
     const loss=stats.total?Math.round(stats.timeouts*100/stats.total):0;
     document.getElementById('d-total').textContent=stats.total;
     document.getElementById('d-avg').textContent=stats.avg?Math.round(stats.avg)+' ms':'—';
@@ -905,70 +826,100 @@ function updateDash(rows,stats) {
     [r.session_id,r.server_ip||'—',r.total,
      r.avg?Math.round(r.avg):'—',r.mn||'—',r.mx||'—',
      r.jitter?Math.round(r.jitter):'—',loss+'%',r.timeouts
-    ].forEach(val=>{
-      const td=document.createElement('td');
-      td.textContent=val; tr.appendChild(td);
-    });
+    ].forEach(val=>{const td=document.createElement('td');td.textContent=val;tr.appendChild(td);});
+    tbody.appendChild(tr);
+  });
+}
+
+// ── Server Switch History ──────────────────────────────────────────────────
+function fmtDuration(secs){
+  if(!secs&&secs!==0) return '—';
+  const h=Math.floor(secs/3600),m=Math.floor(secs%3600/60),s=secs%60;
+  if(h>0) return `${h}h ${m}m ${s}s`;
+  if(m>0) return `${m}m ${s}s`;
+  return `${s}s`;
+}
+function fmtTs(iso){
+  if(!iso) return '—';
+  try{const d=new Date(iso);return d.toLocaleDateString('de-DE')+' '+d.toLocaleTimeString('de-DE');}catch(e){return iso;}
+}
+
+function updateSwitches(rows){
+  const tbody=document.getElementById('switch-tbody');
+  if(!tbody) return;
+  tbody.innerHTML='';
+  if(!rows||!rows.length){
+    const tr=document.createElement('tr'),td=document.createElement('td');
+    td.colSpan=5; td.textContent='No server switches recorded yet.';
+    td.style.cssText='text-align:center;color:var(--muted);padding:20px;';
+    tr.appendChild(td); tbody.appendChild(tr); return;
+  }
+  rows.forEach(r=>{
+    const tr=document.createElement('tr');
+    [fmtTs(r.switched_at), r.from_ip, r.to_ip, fmtDuration(r.duration_seconds), r.session_id]
+      .forEach((val,i)=>{
+        const td=document.createElement('td');
+        td.textContent=val;
+        if(i===1||i===2) td.style.fontFamily='Consolas,monospace';
+        if(i===3) td.style.color='#22c55e';
+        tr.appendChild(td);
+      });
     tbody.appendChild(tr);
   });
 }
 
 // ── Settings (persistent via IPC → userData/settings.json) ────────────────
-let cfg = { startup:false, tray:true, notify:true, spikeMs:150, lossPct:5 };
+let cfg={startup:false,tray:true,notify:true,spikeMs:150,lossPct:5};
 
-function applySettingsToUI() {
-  document.getElementById('s-startup').checked = cfg.startup||false;
-  document.getElementById('s-tray').checked    = cfg.tray!==false;
-  document.getElementById('s-notify').checked  = cfg.notify!==false;
-  document.getElementById('s-spike').value     = cfg.spikeMs||150;
-  document.getElementById('lbl-spike').textContent = (cfg.spikeMs||150)+' ms';
-  document.getElementById('s-loss').value      = cfg.lossPct||5;
-  document.getElementById('lbl-loss').textContent  = (cfg.lossPct||5)+' %';
+function applySettingsToUI(){
+  document.getElementById('s-startup').checked=cfg.startup||false;
+  document.getElementById('s-tray').checked=cfg.tray!==false;
+  document.getElementById('s-notify').checked=cfg.notify!==false;
+  document.getElementById('s-spike').value=cfg.spikeMs||150;
+  document.getElementById('lbl-spike').textContent=(cfg.spikeMs||150)+' ms';
+  document.getElementById('s-loss').value=cfg.lossPct||5;
+  document.getElementById('lbl-loss').textContent=(cfg.lossPct||5)+' %';
 }
 
-function saveSetting(k,v) {
+function saveSetting(k,v){
   cfg[k]=v;
-  if(window.electronAPI && window.electronAPI.saveSettings) {
-    window.electronAPI.saveSettings(cfg);
-  }
-  if(k==='startup' && window.electronAPI) window.electronAPI.send('set-startup', v);
-  if(k==='tray'    && window.electronAPI) window.electronAPI.send('set-tray', v);
+  if(window.electronAPI&&window.electronAPI.saveSettings) window.electronAPI.saveSettings(cfg);
+  if(k==='startup'&&window.electronAPI) window.electronAPI.send('set-startup',v);
+  if(k==='tray'&&window.electronAPI) window.electronAPI.send('set-tray',v);
 }
 
-function loadSettings() {
-  if(window.electronAPI && window.electronAPI.getSettings) {
-    window.electronAPI.getSettings().then(saved => {
-      cfg = Object.assign(cfg, saved);
+function loadSettings(){
+  if(window.electronAPI&&window.electronAPI.getSettings){
+    window.electronAPI.getSettings().then(saved=>{
+      cfg=Object.assign(cfg,saved);
       applySettingsToUI();
-      window.electronAPI.send('set-tray', cfg.tray !== false);
+      window.electronAPI.send('set-tray',cfg.tray!==false);
     });
   } else {
     applySettingsToUI();
   }
-  // sync real system startup state
-  if(window.electronAPI && window.electronAPI.getStartup) {
-    window.electronAPI.getStartup().then(v => {
-      cfg.startup = v;
-      document.getElementById('s-startup').checked = v;
+  if(window.electronAPI&&window.electronAPI.getStartup){
+    window.electronAPI.getStartup().then(v=>{
+      cfg.startup=v;
+      document.getElementById('s-startup').checked=v;
     });
   }
 }
 
 // ── Spike toast ────────────────────────────────────────────────────────────
-let toastTimer = null;
-function showSpikeToast(ms) {
+let toastTimer=null;
+function showSpikeToast(ms){
   if(!cfg.notify) return;
-  document.getElementById('toast-val').textContent = ms+' ms';
-  const t = document.getElementById('spike-toast');
-  t.classList.add('show');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(()=>t.classList.remove('show'), 4000);
+  document.getElementById('toast-val').textContent=ms+' ms';
+  const t=document.getElementById('spike-toast');
+  t.classList.add('show'); clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.classList.remove('show'),4000);
 }
 
-let _lastPing = 0;
-function checkSpike(ping) {
-  if(ping > (cfg.spikeMs||150) && _lastPing <= (cfg.spikeMs||150)) showSpikeToast(ping);
-  _lastPing = ping;
+let _lastPing=0;
+function checkSpike(ping){
+  if(ping>(cfg.spikeMs||150)&&_lastPing<=(cfg.spikeMs||150)) showSpikeToast(ping);
+  _lastPing=ping;
 }
 </script>
 
