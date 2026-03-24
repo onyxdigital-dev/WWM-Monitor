@@ -10,6 +10,63 @@ let overlay = null
 let useTray = true
 let isQuitting = false
 
+// ─── Auto Updater ─────────────────────────────────────────────────────────────
+let autoUpdater = null
+try {
+  autoUpdater = require('electron-updater').autoUpdater
+  autoUpdater.autoDownload = true
+  autoUpdater.autoInstallOnAppQuit = true
+  autoUpdater.logger = null // disable noisy logs, handle events manually
+} catch(e) {
+  console.warn('[updater] electron-updater not available:', e.message)
+}
+
+function initUpdater() {
+  if (!autoUpdater || !app.isPackaged) return
+
+  autoUpdater.on('checking-for-update', () => {
+    sendUpdateStatus({ type: 'checking' })
+  })
+
+  autoUpdater.on('update-available', (info) => {
+    sendUpdateStatus({ type: 'available', version: info.version })
+  })
+
+  autoUpdater.on('update-not-available', () => {
+    sendUpdateStatus({ type: 'not-available' })
+  })
+
+  autoUpdater.on('download-progress', (progress) => {
+    sendUpdateStatus({
+      type: 'progress',
+      percent: Math.round(progress.percent),
+      transferred: progress.transferred,
+      total: progress.total
+    })
+  })
+
+  autoUpdater.on('update-downloaded', (info) => {
+    sendUpdateStatus({ type: 'downloaded', version: info.version })
+  })
+
+  autoUpdater.on('error', (err) => {
+    sendUpdateStatus({ type: 'error', message: err.message })
+  })
+
+  // Check after 4 seconds so the app has time to fully load
+  setTimeout(() => {
+    autoUpdater.checkForUpdates().catch(e =>
+      console.warn('[updater] check failed:', e.message)
+    )
+  }, 4000)
+}
+
+function sendUpdateStatus(data) {
+  if (win && !win.isDestroyed()) {
+    win.webContents.send('update-status', data)
+  }
+}
+
 // ─── Settings ─────────────────────────────────────────────────────────────────
 const SETTINGS_DEFAULTS = { startup: false, tray: true, notify: true, spikeMs: 150, lossPct: 5 }
 
@@ -34,7 +91,7 @@ function saveSettings(cfg) {
   }
 }
 
-// ─── Backend ────────────────────────────────────────────────────────────────────
+// ─── Backend ──────────────────────────────────────────────────────────────────
 function startBackend() {
   const exe = app.isPackaged
     ? path.join(process.resourcesPath, 'backend.exe')
@@ -50,7 +107,7 @@ function startBackend() {
   backend.on('close',  code => console.log('[backend] exited', code))
 }
 
-// ─── Kill backend ──────────────────────────────────────────────────────────────────
+// ─── Kill backend ─────────────────────────────────────────────────────────────
 function killBackend() {
   if (!backend) return
   try {
@@ -63,7 +120,7 @@ function killBackend() {
   backend = null
 }
 
-// ─── Overlay ─────────────────────────────────────────────────────────────────────
+// ─── Overlay ──────────────────────────────────────────────────────────────────
 function createOverlay() {
   if (overlay && !overlay.isDestroyed()) {
     overlay.show()
@@ -98,7 +155,7 @@ function closeOverlay() {
   }
 }
 
-// ─── Shape ──────────────────────────────────────────────────────────────────────────
+// ─── Shape ────────────────────────────────────────────────────────────────────
 function buildRoundedShape(w, h, r) {
   const rects = [
     { x: r, y: 0, width: w - 2*r, height: h },
@@ -122,7 +179,6 @@ function buildRoundedShape(w, h, r) {
 
 function applyRoundedShape() {
   if (!win) return
-  // Skip shape masking when maximized (fills full screen, no rounding needed)
   if (win.isMaximized()) return
   try {
     const [w, h] = win.getSize()
@@ -130,7 +186,7 @@ function applyRoundedShape() {
   } catch(e) {}
 }
 
-// ─── Tray ────────────────────────────────────────────────────────────────────────────
+// ─── Tray ─────────────────────────────────────────────────────────────────────
 function getTrayIcon() {
   const base = app.isPackaged ? process.resourcesPath : __dirname
   const candidates = [
@@ -173,7 +229,7 @@ function buildTrayMenu() {
     { label: 'Anzeigen',   click: () => { if (win) { win.show(); win.focus(); applyRoundedShape() } } },
     { label: 'Verstecken', click: () => { if (win) win.hide() } },
     { type: 'separator' },
-    { label: 'Overlay anzeigen', click: () => createOverlay() },
+    { label: 'Overlay anzeigen',  click: () => createOverlay() },
     { label: 'Overlay schließen', click: () => closeOverlay() },
     { type: 'separator' },
     { label: 'Beenden', click: () => {
@@ -203,7 +259,7 @@ function createTray() {
   }
 }
 
-// ─── Window ──────────────────────────────────────────────────────────────────────────
+// ─── Window ───────────────────────────────────────────────────────────────────
 function createWindow() {
   const iconPath = path.join(app.isPackaged ? process.resourcesPath : __dirname, 'assets', 'icon.png')
   win = new BrowserWindow({
@@ -232,6 +288,7 @@ function createWindow() {
     createTray()
     win.show()
     win.maximize()
+    initUpdater()
   })
 
   win.on('resize', applyRoundedShape)
@@ -246,7 +303,7 @@ function createWindow() {
   })
 }
 
-// ─── App lifecycle ────────────────────────────────────────────────────────────────
+// ─── App lifecycle ────────────────────────────────────────────────────────────
 app.whenReady().then(() => {
   startBackend()
   setTimeout(createWindow, 1800)
@@ -262,7 +319,7 @@ app.on('window-all-closed', () => {
   app.quit()
 })
 
-// ─── IPC ──────────────────────────────────────────────────────────────────────────────
+// ─── IPC ──────────────────────────────────────────────────────────────────────
 ipcMain.on('minimize', () => { if (win) win.minimize() })
 
 ipcMain.on('close', () => {
@@ -308,4 +365,20 @@ ipcMain.handle('save-settings', (_, cfg) => {
   saveSettings(cfg)
   useTray = cfg.tray !== false
   return true
+})
+
+// ─── Updater IPC ──────────────────────────────────────────────────────────────
+ipcMain.on('update-install-now', () => {
+  if (autoUpdater) {
+    isQuitting = true
+    autoUpdater.quitAndInstall(false, true)
+  }
+})
+
+ipcMain.on('update-check-manual', () => {
+  if (autoUpdater && app.isPackaged) {
+    autoUpdater.checkForUpdates().catch(e =>
+      console.warn('[updater] manual check failed:', e.message)
+    )
+  }
 })

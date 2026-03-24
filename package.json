@@ -1,6 +1,6 @@
 {
   "name": "wwm-monitor",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "WWM Ping Monitor",
   "author": "Onyx Digital",
   "main": "main.js",
@@ -13,6 +13,13 @@
   "build": {
     "appId": "com.onyx.wwm-monitor",
     "productName": "WWM Monitor",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "onyxdigital-dev",
+        "repo": "WWM-Monitor"
+      }
+    ],
     "directories": {
       "output": "dist"
     },
@@ -43,6 +50,9 @@
       "src/**/*",
       "assets/**/*"
     ]
+  },
+  "dependencies": {
+    "electron-updater": "^6.3.9"
   },
   "devDependencies": {
     "electron": "^41.0.3",
