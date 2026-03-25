@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+
+# Build output
+build/
+dist/
+dist-python/
+
+# PyInstaller
+*.spec.bak
+__pycache__/
+*.pyc
+*.pyo
+
+# Database & Logs
+*.db
+ping_wwm_*.log
+
+# Electron
+.webpack/
+out/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor
+.vscode/
+.idea/
+*.suo
+*.user
