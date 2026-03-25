@@ -9,6 +9,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   openOverlay:     () => ipcRenderer.send('overlay-open'),
   closeOverlay:    () => ipcRenderer.send('overlay-close'),
   sendPingData:    (data) => ipcRenderer.send('ping-data', data),
+  getAppVersion:   () => ipcRenderer.invoke('get-app-version'),
   // Updater
   onUpdateStatus:  (cb) => ipcRenderer.on('update-status', (_, data) => cb(data)),
   installUpdate:   () => ipcRenderer.send('update-install-now'),
