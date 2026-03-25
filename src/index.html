@@ -37,58 +37,6 @@ body { width:100%; height:100%; background:transparent !important; overflow:hidd
 .slider { -webkit-appearance:none; width:100%; height:4px; background:rgba(255,255,255,0.12); border-radius:2px; outline:none; }
 .slider::-webkit-slider-thumb { -webkit-appearance:none; width:16px; height:16px; border-radius:50%; background:white; cursor:pointer; box-shadow:0 0 8px rgba(255,255,255,0.4); }
 
-/* ── Toasts ── */
-.toast {
-  position:fixed; right:20px; z-index:9999;
-  min-width:220px; max-width:300px;
-  background:rgba(10,10,10,0.82);
-  backdrop-filter:blur(28px); -webkit-backdrop-filter:blur(28px);
-  border-radius:16px; padding:13px 16px 13px 20px;
-  display:flex; align-items:center; gap:12px;
-  transform:translateX(calc(100% + 28px));
-  transition:transform .45s cubic-bezier(.34,1.4,.64,1), opacity .3s ease;
-  opacity:0; pointer-events:none;
-  box-shadow:0 8px 40px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.07);
-  overflow:hidden;
-  -webkit-app-region:no-drag;
-}
-.toast.show { transform:translateX(0); opacity:1; pointer-events:all; }
-.toast-bar {
-  position:absolute; left:0; top:0; bottom:0; width:3px;
-  border-radius:16px 0 0 16px;
-}
-#spike-toast { bottom:24px; border:1px solid rgba(239,68,68,.3); }
-#spike-toast .toast-bar { background:#ef4444; box-shadow:0 0 14px rgba(239,68,68,.7); }
-#hop-toast   { bottom:96px; border:1px solid rgba(168,85,247,.3); }
-#hop-toast   .toast-bar { background:#a855f7; box-shadow:0 0 14px rgba(168,85,247,.7); }
-/* Update toast */
-#update-toast { bottom:168px; border:1px solid rgba(34,197,94,.3); }
-#update-toast .toast-bar { background:#22c55e; box-shadow:0 0 14px rgba(34,197,94,.7); }
-#update-toast .toast-val  { color:#22c55e; font-size:13px; font-weight:700; text-shadow:0 0 22px rgba(34,197,94,.55); }
-.toast-install-btn {
-  margin-top:6px; padding:5px 12px;
-  background:rgba(34,197,94,.18); border:1px solid rgba(34,197,94,.4);
-  border-radius:8px; color:#22c55e; font-size:11px; font-weight:700;
-  cursor:pointer; font-family:inherit; transition:all .2s; -webkit-app-region:no-drag;
-}
-.toast-install-btn:hover { background:rgba(34,197,94,.32); }
-
-.toast-icon { font-size:20px; flex-shrink:0; line-height:1; pointer-events:none; }
-.toast-body { display:flex; flex-direction:column; gap:1px; flex:1; pointer-events:none; }
-.toast-label { font-size:9px; font-weight:700; letter-spacing:.09em; color:rgba(255,255,255,.38); }
-.toast-val   { font-size:20px; font-weight:800; line-height:1.15; }
-.toast-sub   { font-size:10px; color:rgba(255,255,255,.38); margin-top:1px; }
-.toast-close {
-  font-size:16px; color:rgba(255,255,255,.45); flex-shrink:0; line-height:1;
-  padding:4px 6px; cursor:pointer;
-  -webkit-app-region:no-drag;
-  border-radius:6px;
-  transition:color .15s, background .15s;
-}
-.toast-close:hover { color:white; background:rgba(255,255,255,.12); }
-#spike-toast .toast-val { color:#ef4444; text-shadow:0 0 22px rgba(239,68,68,.55); }
-#hop-toast   .toast-val { color:#a855f7; text-shadow:0 0 22px rgba(168,85,247,.55); font-size:12px; font-weight:700; }
-
 .card {
   background:var(--glass); backdrop-filter:blur(var(--blur));
   -webkit-backdrop-filter:blur(var(--blur));
@@ -130,7 +78,6 @@ body { width:100%; height:100%; background:transparent !important; overflow:hidd
 .page { display:none; height:100%; }
 .page.active { display:flex; flex-direction:column; }
 
-/* ── Live page: no scroll, everything stretches ── */
 #live-scroll {
   flex:1; min-height:0;
   padding:10px 14px 12px;
@@ -145,7 +92,6 @@ body { width:100%; height:100%; background:transparent !important; overflow:hidd
 .info-label { font-size:8px; font-weight:700; color:var(--muted); letter-spacing:.08em; }
 .info-value { font-size:12px; color:var(--text); margin-top:4px; line-height:1.4; }
 
-/* ── Ping row stretches to fill available height ── */
 .ping-row { display:flex; gap:9px; flex:1; min-height:0; }
 .ping-card { width:210px; flex-shrink:0; padding:16px 20px; display:flex; flex-direction:column; gap:4px; }
 .ping-label { font-size:9px; font-weight:700; color:var(--muted); letter-spacing:.1em; }
@@ -157,18 +103,15 @@ body { width:100%; height:100%; background:transparent !important; overflow:hidd
   background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.14);
   color:var(--muted2); transition:all .3s; backdrop-filter:blur(8px);
 }
-/* Dual ping mini row */
 .dual-ping-row { display:flex; gap:8px; margin-top:auto; padding-top:8px; }
 .dual-cell { flex:1; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); border-radius:9px; padding:7px 10px; }
 .dual-lbl { font-size:8px; font-weight:700; color:var(--muted); letter-spacing:.07em; }
 .dual-val { font-size:14px; font-weight:800; color:white; margin-top:2px; }
-/* Provider health bar */
 .provider-bar-wrap { margin-top:8px; }
 .provider-bar-label { font-size:8px; font-weight:700; color:var(--muted); letter-spacing:.07em; margin-bottom:4px; display:flex; justify-content:space-between; }
 .provider-bar-bg { height:6px; background:rgba(255,255,255,.07); border-radius:3px; overflow:hidden; }
 .provider-bar-fill { height:100%; border-radius:3px; transition:width .6s, background .4s; }
 
-/* ── Graph card: flex:1, canvases flex-grow ── */
 .graph-card {
   flex:1; min-width:0;
   padding:12px 18px;
@@ -178,7 +121,6 @@ body { width:100%; height:100%; background:transparent !important; overflow:hidd
 .lat-bar-bg { height:5px; background:rgba(255,255,255,.07); border-radius:3px; overflow:hidden; flex-shrink:0; }
 .lat-bar-fill { height:100%; width:0%; border-radius:3px; background:rgba(255,255,255,.7); transition:width .6s cubic-bezier(.4,0,.2,1),background .4s; }
 
-/* Canvases grow to fill remaining space */
 .graph-canvas-wrap { flex:1; min-height:0; position:relative; }
 .graph-canvas-wrap canvas { position:absolute; inset:0; width:100%; height:100%; display:block; }
 
@@ -204,7 +146,6 @@ body { width:100%; height:100%; background:transparent !important; overflow:hidd
 .badge-crit { background:rgba(239,68,68,.12);  border:1px solid rgba(239,68,68,.3);  color:#ef4444; }
 .badge-tout { background:rgba(239,68,68,.15);  border:1px solid rgba(239,68,68,.4);  color:#ff6666; }
 
-/* ── Map section: flex:1, grows with window ── */
 .map-section { display:flex; gap:9px; flex:1; min-height:180px; flex-shrink:0; max-height:260px; }
 .geo-card { width:200px; flex-shrink:0; padding:12px 16px; display:flex; flex-direction:column; justify-content:space-around; }
 .geo-lbl { font-size:8px; font-weight:700; color:var(--muted); letter-spacing:.08em; }
@@ -215,23 +156,19 @@ body { width:100%; height:100%; background:transparent !important; overflow:hidd
 .map-badge-lbl { font-size:8px; font-weight:700; color:var(--muted); letter-spacing:.07em; }
 .map-badge-val { font-size:12px; color:white; margin-top:3px; }
 
-/* spike-info: hidden by default, shown via JS when populated */
 .spike-info { font-size:11px; color:rgba(255,255,255,.4); padding:0 4px; display:none; flex-shrink:0; }
-/* Event marker button */
 .event-btn {
   padding:7px 18px; background:rgba(168,85,247,.15); border:1px solid rgba(168,85,247,.35);
   border-radius:9px; color:#a855f7; font-size:11px; font-weight:700;
   cursor:pointer; font-family:inherit; transition:all .2s; letter-spacing:.05em;
 }
 .event-btn:hover { background:rgba(168,85,247,.28); border-color:rgba(168,85,247,.6); }
-/* Export button */
 .export-btn {
   padding:7px 18px; background:rgba(34,197,94,.12); border:1px solid rgba(34,197,94,.3);
   border-radius:9px; color:#22c55e; font-size:11px; font-weight:700;
   cursor:pointer; font-family:inherit; transition:all .2s; letter-spacing:.05em;
 }
 .export-btn:hover { background:rgba(34,197,94,.25); border-color:rgba(34,197,94,.55); }
-/* Overlay button */
 .overlay-btn {
   padding:7px 18px; background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.15);
   border-radius:9px; color:rgba(255,255,255,.6); font-size:11px; font-weight:700;
@@ -273,8 +210,6 @@ tbody td:first-child { color:var(--text); font-family:'Consolas',monospace; font
   border-radius:8px; padding:9px 12px; color:white; font-size:13px;
   font-family:inherit; outline:none; width:100%;
 }
-
-/* Update check button */
 .update-btn {
   padding:7px 18px; background:rgba(34,197,94,.12); border:1px solid rgba(34,197,94,.3);
   border-radius:9px; color:#22c55e; font-size:11px; font-weight:700;
@@ -331,39 +266,22 @@ tbody td:first-child { color:var(--text); font-family:'Consolas',monospace; font
             <div class="ping-num ping-ok" id="ping-num">--</div>
             <div class="ping-unit" id="ping-unit">ms</div>
             <div class="status-pill" id="status-pill">● WAITING</div>
-            <!-- Dual-Ping -->
             <div class="dual-ping-row">
-              <div class="dual-cell">
-                <div class="dual-lbl">ROUTER</div>
-                <div class="dual-val" id="dp-router">— ms</div>
-              </div>
-              <div class="dual-cell">
-                <div class="dual-lbl">8.8.8.8</div>
-                <div class="dual-val" id="dp-dns">— ms</div>
-              </div>
+              <div class="dual-cell"><div class="dual-lbl">ROUTER</div><div class="dual-val" id="dp-router">— ms</div></div>
+              <div class="dual-cell"><div class="dual-lbl">8.8.8.8</div><div class="dual-val" id="dp-dns">— ms</div></div>
             </div>
-            <!-- Provider health bar -->
             <div class="provider-bar-wrap">
-              <div class="provider-bar-label">
-                <span>PROVIDER HEALTH</span>
-                <span id="provider-health-pct">—</span>
-              </div>
-              <div class="provider-bar-bg">
-                <div class="provider-bar-fill" id="provider-bar" style="width:0%;background:#22c55e;"></div>
-              </div>
+              <div class="provider-bar-label"><span>PROVIDER HEALTH</span><span id="provider-health-pct">—</span></div>
+              <div class="provider-bar-bg"><div class="provider-bar-fill" id="provider-bar" style="width:0%;background:#22c55e;"></div></div>
             </div>
           </div>
           <div class="card graph-card">
             <div class="graph-sublabel">LATENCY BAR</div>
             <div class="lat-bar-bg"><div class="lat-bar-fill" id="lat-bar"></div></div>
             <div class="graph-sublabel" style="margin-top:4px;">PING HISTORY — last 50 pings</div>
-            <div class="graph-canvas-wrap" style="flex:2;">
-              <canvas id="graph-canvas"></canvas>
-            </div>
+            <div class="graph-canvas-wrap" style="flex:2;"><canvas id="graph-canvas"></canvas></div>
             <div class="graph-sublabel" style="margin-top:4px;">JITTER HISTORY — last 50</div>
-            <div class="graph-canvas-wrap" style="flex:1;">
-              <canvas id="jitter-canvas"></canvas>
-            </div>
+            <div class="graph-canvas-wrap" style="flex:1;"><canvas id="jitter-canvas"></canvas></div>
           </div>
         </div>
 
@@ -425,7 +343,6 @@ tbody td:first-child { color:var(--text); font-family:'Consolas',monospace; font
             <div class="stat-tile"><div class="stat-val" id="d-sessions" style="color:rgba(255,255,255,.65)">—</div><div class="stat-lbl">SESSIONS</div></div>
           </div>
         </div>
-        <!-- Action buttons row: Export + Mark Event + Overlay -->
         <div style="display:flex;gap:8px;padding:0 2px;" class="fade-in">
           <button class="export-btn no-drag" onclick="exportCSV()">⬇ EXPORT CSV</button>
           <button class="event-btn no-drag" onclick="markEvent()">⚑ MARK EVENT</button>
@@ -435,10 +352,7 @@ tbody td:first-child { color:var(--text); font-family:'Consolas',monospace; font
           <div class="sec-hdr"><div class="sec-bar"></div><div class="sec-title">SESSION HISTORY</div></div>
           <div class="table-scroll">
             <table>
-              <thead><tr>
-                <th>Session</th><th>Server</th><th>Pings</th><th>Avg ms</th>
-                <th>Min</th><th>Max</th><th>Jitter</th><th>Loss</th><th>Spikes</th>
-              </tr></thead>
+              <thead><tr><th>Session</th><th>Server</th><th>Pings</th><th>Avg ms</th><th>Min</th><th>Max</th><th>Jitter</th><th>Loss</th><th>Spikes</th></tr></thead>
               <tbody id="sess-tbody"></tbody>
             </table>
           </div>
@@ -447,12 +361,8 @@ tbody td:first-child { color:var(--text); font-family:'Consolas',monospace; font
           <div class="sec-hdr"><div class="sec-bar"></div><div class="sec-title">SERVER SWITCH HISTORY</div></div>
           <div class="table-scroll">
             <table>
-              <thead><tr>
-                <th>Time</th><th>From IP</th><th>To IP</th><th>Duration on old server</th><th>Session</th>
-              </tr></thead>
-              <tbody id="switch-tbody">
-                <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px;">No server switches recorded yet.</td></tr>
-              </tbody>
+              <thead><tr><th>Time</th><th>From IP</th><th>To IP</th><th>Duration on old server</th><th>Session</th></tr></thead>
+              <tbody id="switch-tbody"><tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px;">No server switches recorded yet.</td></tr></tbody>
             </table>
           </div>
         </div>
@@ -461,9 +371,7 @@ tbody td:first-child { color:var(--text); font-family:'Consolas',monospace; font
           <div class="table-scroll">
             <table>
               <thead><tr><th>Time</th><th>Label</th><th>Ping at event</th></tr></thead>
-              <tbody id="events-tbody">
-                <tr><td colspan="3" style="text-align:center;color:var(--muted);padding:20px;">No events marked yet.</td></tr>
-              </tbody>
+              <tbody id="events-tbody"><tr><td colspan="3" style="text-align:center;color:var(--muted);padding:20px;">No events marked yet.</td></tr></tbody>
             </table>
           </div>
         </div>
@@ -484,23 +392,6 @@ tbody td:first-child { color:var(--text); font-family:'Consolas',monospace; font
               <div><div style="font-size:13px;color:var(--text);">Minimize to Tray</div><div style="font-size:11px;color:var(--muted);margin-top:2px;">Keep running in system tray</div></div>
               <label class="toggle no-drag"><input type="checkbox" id="s-tray" checked onchange="saveSetting('tray',this.checked)"><span class="toggle-track"></span></label>
             </div>
-            <div style="display:flex;align-items:center;justify-content:space-between;">
-              <div><div style="font-size:13px;color:var(--text);">Spike Notifications</div><div style="font-size:11px;color:var(--muted);margin-top:2px;">Alert when ping exceeds threshold</div></div>
-              <label class="toggle no-drag"><input type="checkbox" id="s-notify" checked onchange="saveSetting('notify',this.checked)"><span class="toggle-track"></span></label>
-            </div>
-          </div>
-        </div>
-        <div class="card" style="padding:22px 24px;">
-          <div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.1em;margin-bottom:16px;">ALERT THRESHOLDS</div>
-          <div style="display:flex;flex-direction:column;gap:16px;">
-            <div>
-              <div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-size:12px;color:var(--text);">Spike Warning</span><span style="font-size:12px;color:var(--muted2);" id="lbl-spike">150 ms</span></div>
-              <input type="range" class="slider no-drag" min="50" max="500" value="150" id="s-spike" oninput="document.getElementById('lbl-spike').textContent=this.value+' ms';saveSetting('spikeMs',+this.value)">
-            </div>
-            <div>
-              <div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-size:12px;color:var(--text);">Packet Loss Warning</span><span style="font-size:12px;color:var(--muted2);" id="lbl-loss">5 %</span></div>
-              <input type="range" class="slider no-drag" min="1" max="50" value="5" id="s-loss" oninput="document.getElementById('lbl-loss').textContent=this.value+' %';saveSetting('lossPct',+this.value)">
-            </div>
           </div>
         </div>
         <div class="card" style="padding:22px 24px;">
@@ -519,6 +410,18 @@ tbody td:first-child { color:var(--text); font-family:'Consolas',monospace; font
     </div>
   </div>
 </div>
+
+<div id="event-modal" class="no-drag">
+  <div id="event-modal-box">
+    <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.5);letter-spacing:.08em;">EVENT LABEL</div>
+    <input id="event-modal-input" class="no-drag" type="text" value="Round Start" maxlength="40"/>
+    <div style="display:flex;gap:8px;">
+      <button class="event-btn no-drag" style="flex:1;" onclick="confirmEvent()">⚑ MARK</button>
+      <button class="export-btn no-drag" style="flex:1;" onclick="closeEventModal()">CANCEL</button>
+    </div>
+  </div>
+</div>
+
 <script>
 let ws;
 const WARN=80, CRIT=150;
@@ -533,7 +436,6 @@ function connect() {
     if (msg.type==='sessions')  updateDash(msg.data, msg.stats);
     if (msg.type==='switches')  updateSwitches(msg.data);
     if (msg.type==='events')    updateEvents(msg.data);
-    if (msg.type==='event_ack') showEventToast(msg.label);
     if (msg.type==='csv_data')  downloadCSV(msg.csv);
   };
 }
@@ -554,12 +456,7 @@ function switchTab(tab) {
 function minimize() { if(window.electronAPI) window.electronAPI.minimize(); }
 function closeApp()  { if(window.electronAPI) window.electronAPI.close(); }
 
-// ── Toast close — called via inline onclick on .toast-close spans ──────────
-function closeToast(id) {
-  document.getElementById(id).classList.remove('show');
-}
-
-// ── Auto Updater ───────────────────────────────────────────────────────────
+// ── Auto Updater (nur Settings-Status, keine Toasts mehr) ─────────────────
 let updateDownloaded = false;
 
 function initUpdater() {
@@ -574,13 +471,12 @@ function initUpdater() {
         break;
       case 'not-available':
         if(statusEl) statusEl.textContent = 'Already up to date ✓';
-        if(btn) { btn.disabled = false; }
+        if(btn) btn.disabled = false;
         setTimeout(()=>{ if(statusEl) statusEl.textContent=''; },4000);
         break;
       case 'available':
         if(statusEl) statusEl.textContent = `v${data.version} available — downloading...`;
         if(btn) btn.disabled = true;
-        showUpdateToast(`v${data.version} available`, false);
         break;
       case 'progress':
         if(statusEl) statusEl.textContent = `Downloading... ${data.percent}%`;
@@ -589,7 +485,6 @@ function initUpdater() {
         updateDownloaded = true;
         if(statusEl) statusEl.textContent = `v${data.version} ready to install`;
         if(btn) { btn.textContent = '⬆ INSTALL NOW'; btn.disabled = false; btn.onclick = installUpdate; }
-        showUpdateToast(`v${data.version} ready`, true);
         break;
       case 'error':
         if(statusEl) statusEl.textContent = 'Update check failed';
@@ -601,27 +496,12 @@ function initUpdater() {
 }
 
 function manualCheckUpdate() {
-  if(window.electronAPI && window.electronAPI.checkForUpdates) {
+  if(window.electronAPI && window.electronAPI.checkForUpdates)
     window.electronAPI.checkForUpdates();
-  }
 }
-
 function installUpdate() {
-  if(window.electronAPI && window.electronAPI.installUpdate) {
+  if(window.electronAPI && window.electronAPI.installUpdate)
     window.electronAPI.installUpdate();
-  }
-}
-
-// ── Update Toast ────────────────────────────────────────────────────────────
-let updateToastTimer = null;
-function showUpdateToast(text, showInstall) {
-  document.getElementById('update-toast-text').textContent = text;
-  const installBtn = document.getElementById('update-install-btn');
-  if(installBtn) installBtn.style.display = showInstall ? 'inline-block' : 'none';
-  const t = document.getElementById('update-toast');
-  t.classList.add('show');
-  clearTimeout(updateToastTimer);
-  updateToastTimer = setTimeout(() => t.classList.remove('show'), showInstall ? 12000 : 6000);
 }
 
 // ── Overlay toggle ─────────────────────────────────────────────────────────
@@ -642,7 +522,6 @@ function toggleOverlay() {
 
 // ── Live ───────────────────────────────────────────────────────────────────
 let graphHistory=[], jitterHistory=[];
-let lastHopCount=null;
 
 function updateLive(d) {
   const ms=d.last_ms, count=d.count, lost=d.lost, recv=count-lost;
@@ -692,11 +571,8 @@ function updateLive(d) {
     document.getElementById('provider-health-pct').textContent=Math.round(health)+'%';
   }
 
-  if (d.hops && d.hops.length) {
+  if (d.hops && d.hops.length)
     document.getElementById('geo-hops').textContent=d.hops.length+' hops';
-    if (lastHopCount!==null && d.hop_changed) showHopToast(d.hops.length);
-    lastHopCount=d.hops.length;
-  }
 
   const pn=document.getElementById('ping-num');
   const pill=document.getElementById('status-pill');
@@ -766,7 +642,6 @@ function updateLive(d) {
   drawGraph();
   drawJitter();
   updateMap(d);
-  if (ms!==null&&ms!==undefined) checkSpike(ms);
 
   if (window.electronAPI && window.electronAPI.sendPingData)
     window.electronAPI.sendPingData({ ms: ms });
@@ -946,9 +821,9 @@ function clampView(W,H){
 }
 
 function initMapInteraction(){
-  const canvas=getCanvas();if(!canvas)return;  if(canvas.dataset.init)return;
+  const canvas=getCanvas();if(!canvas)return;
+  if(canvas.dataset.init)return;
   canvas.dataset.init='1';
-
   canvas.addEventListener('wheel',(e)=>{
     e.preventDefault();
     if(zoomAnim){cancelAnimationFrame(zoomAnim);zoomAnim=null;}
@@ -1152,7 +1027,6 @@ function exportCSV(){
   if(!ws||ws.readyState!==1)return;
   ws.send(JSON.stringify({type:'export_csv'}));
 }
-
 function downloadCSV(csvStr){
   const blob=new Blob([csvStr],{type:'text/csv'});
   const url=URL.createObjectURL(blob);
@@ -1163,16 +1037,11 @@ function downloadCSV(csvStr){
 }
 
 // ── Settings ───────────────────────────────────────────────────────────────
-let cfg={startup:false,tray:true,notify:true,spikeMs:150,lossPct:5};
+let cfg={startup:false,tray:true,spikeMs:150,lossPct:5};
 
 function applySettingsToUI(){
   document.getElementById('s-startup').checked=cfg.startup||false;
   document.getElementById('s-tray').checked=cfg.tray!==false;
-  document.getElementById('s-notify').checked=cfg.notify!==false;
-  document.getElementById('s-spike').value=cfg.spikeMs||150;
-  document.getElementById('lbl-spike').textContent=(cfg.spikeMs||150)+' ms';
-  document.getElementById('s-loss').value=cfg.lossPct||5;
-  document.getElementById('lbl-loss').textContent=(cfg.lossPct||5)+' %';
 }
 
 function saveSetting(k,v){
@@ -1197,98 +1066,6 @@ function loadSettings(){
     });
   }
 }
-
-// ── Spike Toast ─────────────────────────────────────────────────────────────
-let toastTimer = null;
-let _spikeCooldown = false;
-
-function showSpikeToast(ms){
-  if(!cfg.notify) return;
-  if(_spikeCooldown) return;
-  _spikeCooldown = true;
-  document.getElementById('toast-val').textContent = ms + ' ms';
-  const t = document.getElementById('spike-toast');
-  t.classList.add('show');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => {
-    t.classList.remove('show');
-    setTimeout(() => { _spikeCooldown = false; }, 3000);
-  }, 4000);
-}
-
-let _lastPing = 0;
-function checkSpike(ping){
-  if(ping > (cfg.spikeMs||150) && _lastPing <= (cfg.spikeMs||150)) showSpikeToast(ping);
-  _lastPing = ping;
-}
-
-// ── Hop Change Toast ────────────────────────────────────────────────────────
-let hopToastTimer = null;
-function showHopToast(hopCount){
-  document.getElementById('hop-toast-text').textContent = `Route changed — now ${hopCount} hops`;
-  const t = document.getElementById('hop-toast');
-  t.classList.add('show');
-  clearTimeout(hopToastTimer);
-  hopToastTimer = setTimeout(() => t.classList.remove('show'), 5000);
-}
-
-// ── Event Ack Toast ─────────────────────────────────────────────────────────
-let eventToastTimer = null;
-function showEventToast(label){
-  document.getElementById('hop-toast-text').textContent = `Event marked: ${label}`;
-  const t = document.getElementById('hop-toast');
-  t.classList.add('show');
-  clearTimeout(hopToastTimer);
-  clearTimeout(eventToastTimer);
-  eventToastTimer = setTimeout(() => t.classList.remove('show'), 3000);
-}
 </script>
-
-<!-- Spike Toast -->
-<div id="spike-toast" class="toast no-drag">
-  <div class="toast-bar"></div>
-  <div class="toast-icon">⚡</div>
-  <div class="toast-body">
-    <div class="toast-label">SPIKE DETECTED</div>
-    <div class="toast-val" id="toast-val">— ms</div>
-    <div class="toast-sub">latency spike</div>
-  </div>
-  <span class="toast-close no-drag" onclick="closeToast('spike-toast')">✕</span>
-</div>
-
-<!-- Hop / Event Toast -->
-<div id="hop-toast" class="toast no-drag">
-  <div class="toast-bar"></div>
-  <div class="toast-icon">🔀</div>
-  <div class="toast-body">
-    <div class="toast-label">NETWORK EVENT</div>
-    <div class="toast-val" id="hop-toast-text">Route changed</div>
-  </div>
-  <span class="toast-close no-drag" onclick="closeToast('hop-toast')">✕</span>
-</div>
-
-<!-- Update Toast -->
-<div id="update-toast" class="toast no-drag">
-  <div class="toast-bar"></div>
-  <div class="toast-icon">🔄</div>
-  <div class="toast-body">
-    <div class="toast-label">UPDATE</div>
-    <div class="toast-val" id="update-toast-text">Checking...</div>
-    <button class="toast-install-btn no-drag" id="update-install-btn" onclick="installUpdate()" style="display:none;">⬆ INSTALL &amp; RESTART</button>
-  </div>
-  <span class="toast-close no-drag" onclick="closeToast('update-toast')">✕</span>
-</div>
-
-<div id="event-modal" class="no-drag">
-  <div id="event-modal-box">
-    <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.5);letter-spacing:.08em;">EVENT LABEL</div>
-    <input id="event-modal-input" class="no-drag" type="text" value="Round Start" maxlength="40"/>
-    <div style="display:flex;gap:8px;">
-      <button class="event-btn no-drag" style="flex:1;" onclick="confirmEvent()">⚑ MARK</button>
-      <button class="export-btn no-drag" style="flex:1;" onclick="closeEventModal()">CANCEL</button>
-    </div>
-  </div>
-</div>
-
 </body>
 </html>
