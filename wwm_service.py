@@ -1,5 +1,5 @@
 # pip install websockets psutil requests
-import asyncio, websockets, json, threading, time, sqlite3, re, subprocess, requests, psutil
+import asyncio, websockets, json, threading, time, sqlite3, re, subprocess, requests, psutil, socket
 from datetime import datetime
 from collections import deque
 
@@ -9,7 +9,7 @@ LOG_FILE=f"ping_wwm_{datetime.now().strftime('%Y%m%d')}.log"
 GAME_EXES=["wwm.exe","wherewsindsmeet.exe","where winds meet-win64-shipping.exe","wherewındsmeet-win64-shipping.exe"]
 
 state = {
-    'running':False,'pid':None,'exe':None,'server_ip':None,
+    'running':False,'pid':None,'exe':None,'server_ip':None,'server_port':None,
     'geo_city':'','geo_country':'','geo_isp':'',
     'count':0,'lost':0,'sum':0,'min':99999,'max':0,
     'jitter_sum':0,'jitter_count':0,'spikes':0,'streak':0,
@@ -127,14 +127,15 @@ def find_game():
     return None,None
 
 def find_server_ip(pid):
+    """Returns (ip, port) tuple of the game server connection."""
     try:
         for c in psutil.Process(pid).net_connections('tcp'):
             if c.status=='ESTABLISHED' and c.raddr:
                 ip=c.raddr.ip
                 if not any(ip.startswith(x) for x in ['127.','0.0.','192.168.','10.','172.']):
-                    return ip
+                    return ip, c.raddr.port
     except:pass
-    return None
+    return None, None
 
 def get_router_ip():
     try:
@@ -152,7 +153,21 @@ def get_geo(ip):
         return r.get('city',''),r.get('country',''),r.get('isp',''),r.get('lat',0),r.get('lon',0)
     except:return '','','',0,0
 
-def ping_once(ip):
+def ping_tcp(ip, port, timeout=2):
+    """Measure latency via TCP connect. Works even when ICMP is blocked."""
+    try:
+        s=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.settimeout(timeout)
+        start=time.perf_counter()
+        s.connect((ip, port))
+        ms=int((time.perf_counter()-start)*1000)
+        s.close()
+        return ms if ms > 0 else 1
+    except:
+        return None
+
+def ping_icmp(ip):
+    """Standard ICMP ping. Used for router and DNS latency."""
     try:
         out=subprocess.check_output(['ping','-n','1','-w','2000',ip],
             stderr=subprocess.DEVNULL,creationflags=0x08000000).decode('cp850',errors='ignore')
@@ -161,6 +176,12 @@ def ping_once(ip):
         if re.search(r'(?:Zeit|time)<1ms',out,re.IGNORECASE):return 1
     except:pass
     return None
+
+def ping_once(ip, port=None):
+    """Use TCP ping for game server (port given), ICMP for router/DNS."""
+    if port:
+        return ping_tcp(ip, port)
+    return ping_icmp(ip)
 
 def get_hops(ip):
     hops=[]
@@ -183,13 +204,14 @@ def monitor_loop():
         while not pid:
             pid,exe=find_game();time.sleep(2)
         s['pid']=pid;s['exe']=exe;s['status']='Scanning connections...'
-        server_ip=None
+        server_ip=None; server_port=None
         while not server_ip:
-            server_ip=find_server_ip(pid)
+            server_ip,server_port=find_server_ip(pid)
             if not find_game()[0]:break
             time.sleep(2)
         if not server_ip:continue
-        s['server_ip']=server_ip;s['status']='Fetching location...'
+        s['server_ip']=server_ip;s['server_port']=server_port
+        s['status']='Fetching location...'
         city,country,isp,lat,lon=get_geo(server_ip)
         s.update({'geo_city':city,'geo_country':country,'geo_isp':isp,
             'geo_lat':lat,'geo_lon':lon,
@@ -208,12 +230,13 @@ def monitor_loop():
         while True:
             if not find_game()[0]:break
             if s['count']>0 and s['count']%30==0:
-                nip=find_server_ip(pid)
+                nip,nport=find_server_ip(pid)
                 if nip and nip!=server_ip:
                     duration=int((datetime.now()-ip_connected_since).total_seconds())
                     save_switch(sid,server_ip,nip,duration)
                     old_hops=list(s['hops'])
-                    server_ip=nip;s['server_ip']=nip
+                    server_ip=nip;server_port=nport
+                    s['server_ip']=nip;s['server_port']=nport
                     city,country,isp,lat,lon=get_geo(nip)
                     s['geo_city']=city;s['geo_country']=country;s['geo_isp']=isp
                     s['geo_lat']=lat;s['geo_lon']=lon
@@ -229,14 +252,15 @@ def monitor_loop():
             _rip=s.get('router_ip') or get_router_ip()
             if _rip: s['router_ip']=_rip
             def ping_router(_ip=_rip):
-                if _ip: r_ms[0]=ping_once(_ip)
+                if _ip: r_ms[0]=ping_once(_ip)  # ICMP (kein port)
             def ping_dns():
-                 d_ms[0]=ping_once('8.8.8.8')
+                d_ms[0]=ping_once('8.8.8.8')    # ICMP (kein port)
             t1=threading.Thread(target=ping_router,daemon=True)
             t2=threading.Thread(target=ping_dns,daemon=True)
             t1.start();t2.start()
 
-            ms=ping_once(server_ip)
+            # TCP-ping zum Game-Server mit echtem Port
+            ms=ping_once(server_ip, port=server_port)
             t1.join(timeout=3);t2.join(timeout=3)
             s['router_ms']=r_ms[0];s['dns_ms']=d_ms[0]
 
