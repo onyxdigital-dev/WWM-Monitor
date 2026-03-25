@@ -16,7 +16,8 @@ try {
   autoUpdater = require('electron-updater').autoUpdater
   autoUpdater.autoDownload = true
   autoUpdater.autoInstallOnAppQuit = true
-  autoUpdater.logger = null
+  autoUpdater.logger = require('electron-log')
+  autoUpdater.logger.transports.file.level = 'debug'
 } catch(e) {
   console.warn('[updater] electron-updater not available:', e.message)
 }
@@ -50,15 +51,16 @@ function initUpdater() {
   })
 
   autoUpdater.on('error', (err) => {
+    console.error('[updater] ERROR:', err)
     sendUpdateStatus({ type: 'error', message: err.message })
   })
 
   // Auto-check on startup only in packaged builds
   if (app.isPackaged) {
     setTimeout(() => {
-      autoUpdater.checkForUpdates().catch(e =>
+      autoUpdater.checkForUpdates().catch(e => {
         console.warn('[updater] auto-check failed:', e.message)
-      )
+      })
     }, 4000)
   }
 }
@@ -279,10 +281,14 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       webSecurity: false,
+      devTools: true,
     }
   })
 
   win.loadFile(path.join(__dirname, 'src', 'index.html'))
+
+  // Open DevTools for debugging (remove after fix)
+  win.webContents.openDevTools({ mode: 'detach' })
 
   win.once('ready-to-show', () => {
     const cfg = loadSettings()
@@ -387,7 +393,7 @@ ipcMain.on('update-check-manual', () => {
     return
   }
   autoUpdater.checkForUpdates().catch(e => {
-    console.warn('[updater] manual check failed:', e.message)
+    console.error('[updater] manual check failed:', e)
     sendUpdateStatus({ type: 'error', message: e.message })
   })
 })
