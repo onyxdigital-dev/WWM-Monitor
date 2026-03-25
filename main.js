@@ -1,6 +1,6 @@
 const { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage } = require('electron')
 const path = require('path')
-const { spawn } = require('child_process')
+const { spawn, execSync } = require('child_process')
 const fs = require('fs')
 
 let win = null
@@ -128,12 +128,23 @@ function killBackend() {
   if (!backend) return
   try {
     if (process.platform === 'win32') {
-      const { execSync } = require('child_process')
       try { execSync(`taskkill /PID ${backend.pid} /T /F`, { windowsHide: true }) } catch(e) {}
     }
     backend.kill('SIGTERM')
   } catch(e) {}
   backend = null
+}
+
+// Kills ALL wwm_service.exe processes by name (for update scenario)
+function killBackendByName() {
+  if (process.platform !== 'win32') return
+  try {
+    execSync('taskkill /IM wwm_service.exe /T /F', { windowsHide: true })
+    writeLog('killBackendByName: wwm_service.exe terminated')
+  } catch(e) {
+    // process may already be gone, that's fine
+    writeLog(`killBackendByName: ${e.message}`)
+  }
 }
 
 // ─── Overlay ──────────────────────────────────────────────────────────────────
@@ -317,8 +328,14 @@ app.whenReady().then(() => {
   })
 })
 
+app.on('before-quit', () => {
+  killBackend()
+  killBackendByName()
+})
+
 app.on('window-all-closed', () => {
   killBackend()
+  killBackendByName()
   closeOverlay()
   if (tray) { try { tray.destroy() } catch(e) {} }
   app.quit()
@@ -333,6 +350,7 @@ ipcMain.on('close', () => {
   } else {
     isQuitting = true
     killBackend()
+    killBackendByName()
     closeOverlay()
     if (tray) { try { tray.destroy(); tray = null } catch(e) {} }
     app.exit(0)
@@ -372,10 +390,17 @@ ipcMain.handle('save-settings', (_, cfg) => {
 
 // ─── Updater IPC ──────────────────────────────────────────────────────────────
 ipcMain.on('update-install-now', () => {
-  if (autoUpdater) {
-    isQuitting = true
+  if (!autoUpdater) return
+  isQuitting = true
+  writeLog('update-install-now: killing backend before install...')
+  killBackend()
+  killBackendByName()
+  closeOverlay()
+  if (tray) { try { tray.destroy(); tray = null } catch(e) {} }
+  // Give OS time to release file handles before installer runs
+  setTimeout(() => {
     autoUpdater.quitAndInstall(false, true)
-  }
+  }, 800)
 })
 
 ipcMain.on('update-check-manual', () => {
