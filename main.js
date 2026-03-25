@@ -135,14 +135,12 @@ function killBackend() {
   backend = null
 }
 
-// Kills ALL wwm_service.exe processes by name (for update scenario)
 function killBackendByName() {
   if (process.platform !== 'win32') return
   try {
     execSync('taskkill /IM wwm_service.exe /T /F', { windowsHide: true })
     writeLog('killBackendByName: wwm_service.exe terminated')
   } catch(e) {
-    // process may already be gone, that's fine
     writeLog(`killBackendByName: ${e.message}`)
   }
 }
@@ -388,6 +386,10 @@ ipcMain.handle('save-settings', (_, cfg) => {
   return true
 })
 
+ipcMain.handle('get-app-version', () => {
+  return app.getVersion()
+})
+
 // ─── Updater IPC ──────────────────────────────────────────────────────────────
 ipcMain.on('update-install-now', () => {
   if (!autoUpdater) return
@@ -397,7 +399,6 @@ ipcMain.on('update-install-now', () => {
   killBackendByName()
   closeOverlay()
   if (tray) { try { tray.destroy(); tray = null } catch(e) {} }
-  // Give OS time to release file handles before installer runs
   setTimeout(() => {
     autoUpdater.quitAndInstall(false, true)
   }, 800)
