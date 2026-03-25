@@ -456,7 +456,7 @@ function switchTab(tab) {
 function minimize() { if(window.electronAPI) window.electronAPI.minimize(); }
 function closeApp()  { if(window.electronAPI) window.electronAPI.close(); }
 
-// ── Auto Updater (nur Settings-Status, keine Toasts mehr) ─────────────────
+// ── Auto Updater ─────────────────────────────────────────────────────────────
 let updateDownloaded = false;
 
 function initUpdater() {
@@ -1066,7 +1066,7 @@ function loadSettings(){
     });
   }
 }
-src="version-init.js"
 </script>
+<script src="version-init.js"></script>
 </body>
 </html>
