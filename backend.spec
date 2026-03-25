@@ -8,7 +8,7 @@ a = Analysis(
     binaries=[],
     datas=[],
     hiddenimports=[
-        'websockets', 'asyncio', 'psutil', 'requests', 'sqlite3', 
+        'websockets', 'asyncio', 'psutil', 'requests', 'sqlite3',
         'json', 'threading', 'time', 'os', 'sys', 'platform'
     ],
     hookspath=[],
@@ -30,7 +30,7 @@ exe = EXE(
     a.zipfiles,
     a.datas,
     [],
-    name='backend',
+    name='wwm_service',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
