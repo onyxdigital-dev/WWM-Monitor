@@ -49,9 +49,9 @@ body { width:100%; height:100%; background:transparent !important; overflow:hidd
   transition:transform .45s cubic-bezier(.34,1.4,.64,1), opacity .3s ease;
   opacity:0; pointer-events:none;
   box-shadow:0 8px 40px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.07);
-  overflow:hidden;
+  overflow:hidden; cursor:pointer;
 }
-.toast.show { transform:translateX(0); opacity:1; }
+.toast.show { transform:translateX(0); opacity:1; pointer-events:all; }
 .toast-bar {
   position:absolute; left:0; top:0; bottom:0; width:3px;
   border-radius:16px 0 0 16px;
@@ -61,7 +61,7 @@ body { width:100%; height:100%; background:transparent !important; overflow:hidd
 #hop-toast   { bottom:96px; border:1px solid rgba(168,85,247,.3); }
 #hop-toast   .toast-bar { background:#a855f7; box-shadow:0 0 14px rgba(168,85,247,.7); }
 /* Update toast */
-#update-toast { bottom:168px; border:1px solid rgba(34,197,94,.3); pointer-events:all; }
+#update-toast { bottom:168px; border:1px solid rgba(34,197,94,.3); }
 #update-toast .toast-bar { background:#22c55e; box-shadow:0 0 14px rgba(34,197,94,.7); }
 #update-toast .toast-val  { color:#22c55e; font-size:13px; font-weight:700; text-shadow:0 0 22px rgba(34,197,94,.55); }
 .toast-install-btn {
@@ -73,10 +73,11 @@ body { width:100%; height:100%; background:transparent !important; overflow:hidd
 .toast-install-btn:hover { background:rgba(34,197,94,.32); }
 
 .toast-icon { font-size:20px; flex-shrink:0; line-height:1; }
-.toast-body { display:flex; flex-direction:column; gap:1px; }
+.toast-body { display:flex; flex-direction:column; gap:1px; flex:1; }
 .toast-label { font-size:9px; font-weight:700; letter-spacing:.09em; color:rgba(255,255,255,.38); }
 .toast-val   { font-size:20px; font-weight:800; line-height:1.15; }
 .toast-sub   { font-size:10px; color:rgba(255,255,255,.38); margin-top:1px; }
+.toast-close { font-size:14px; color:rgba(255,255,255,.25); flex-shrink:0; line-height:1; padding:2px 4px; }
 #spike-toast .toast-val { color:#ef4444; text-shadow:0 0 22px rgba(239,68,68,.55); }
 #hop-toast   .toast-val { color:#a855f7; text-shadow:0 0 22px rgba(168,85,247,.55); font-size:12px; font-weight:700; }
 
@@ -545,6 +546,24 @@ function switchTab(tab) {
 function minimize() { if(window.electronAPI) window.electronAPI.minimize(); }
 function closeApp()  { if(window.electronAPI) window.electronAPI.close(); }
 
+// ── Toast Helper ────────────────────────────────────────────────────────────
+function dismissToast(id) {
+  const t = document.getElementById(id);
+  if (t) t.classList.remove('show');
+}
+
+// Bind click-to-close on all toasts after DOM ready
+window.addEventListener('load', () => {
+  ['spike-toast','hop-toast','update-toast'].forEach(id => {
+    const t = document.getElementById(id);
+    if (t) t.addEventListener('click', (e) => {
+      // Don't close if clicking the install button
+      if (e.target.classList.contains('toast-install-btn')) return;
+      t.classList.remove('show');
+    });
+  });
+});
+
 // ── Auto Updater ───────────────────────────────────────────────────────────
 let updateDownloaded = false;
 
@@ -607,7 +626,8 @@ function showUpdateToast(text, showInstall) {
   const t = document.getElementById('update-toast');
   t.classList.add('show');
   clearTimeout(updateToastTimer);
-  if (!showInstall) updateToastTimer = setTimeout(()=>t.classList.remove('show'), 6000);
+  // Always auto-dismiss: 6s for info, 12s for install prompt
+  updateToastTimer = setTimeout(() => t.classList.remove('show'), showInstall ? 12000 : 6000);
 }
 
 // ── Overlay toggle ─────────────────────────────────────────────────────────
@@ -1185,36 +1205,49 @@ function loadSettings(){
 }
 
 // ── Spike Toast ─────────────────────────────────────────────────────────────
-let toastTimer=null;
+let toastTimer = null;
+let _spikeCooldown = false;
+
 function showSpikeToast(ms){
-  if(!cfg.notify)return;
-  document.getElementById('toast-val').textContent=ms+' ms';
-  const t=document.getElementById('spike-toast');
-  t.classList.add('show');clearTimeout(toastTimer);
-  toastTimer=setTimeout(()=>t.classList.remove('show'),4000);
+  if(!cfg.notify) return;
+  if(_spikeCooldown) return;  // Cooldown: verhindert endloses Retriggern
+  _spikeCooldown = true;
+  document.getElementById('toast-val').textContent = ms + ' ms';
+  const t = document.getElementById('spike-toast');
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    t.classList.remove('show');
+    // Cooldown erst nach weiteren 3s zurücksetzen
+    setTimeout(() => { _spikeCooldown = false; }, 3000);
+  }, 4000);
 }
 
-let _lastPing=0;
+let _lastPing = 0;
 function checkSpike(ping){
-  if(ping>(cfg.spikeMs||150)&&_lastPing<=(cfg.spikeMs||150))showSpikeToast(ping);
-  _lastPing=ping;
+  if(ping > (cfg.spikeMs||150) && _lastPing <= (cfg.spikeMs||150)) showSpikeToast(ping);
+  _lastPing = ping;
 }
 
 // ── Hop Change Toast ────────────────────────────────────────────────────────
-let hopToastTimer=null;
+let hopToastTimer = null;
 function showHopToast(hopCount){
-  document.getElementById('hop-toast-text').textContent=`Route changed — now ${hopCount} hops`;
-  const t=document.getElementById('hop-toast');
-  t.classList.add('show');clearTimeout(hopToastTimer);
-  hopToastTimer=setTimeout(()=>t.classList.remove('show'),5000);
+  document.getElementById('hop-toast-text').textContent = `Route changed — now ${hopCount} hops`;
+  const t = document.getElementById('hop-toast');
+  t.classList.add('show');
+  clearTimeout(hopToastTimer);
+  hopToastTimer = setTimeout(() => t.classList.remove('show'), 5000);
 }
 
 // ── Event Ack Toast ─────────────────────────────────────────────────────────
+let eventToastTimer = null;
 function showEventToast(label){
-  document.getElementById('hop-toast-text').textContent=`Event marked: ${label}`;
-  const t=document.getElementById('hop-toast');
-  t.classList.add('show');clearTimeout(hopToastTimer);
-  hopToastTimer=setTimeout(()=>t.classList.remove('show'),3000);
+  document.getElementById('hop-toast-text').textContent = `Event marked: ${label}`;
+  const t = document.getElementById('hop-toast');
+  t.classList.add('show');
+  clearTimeout(hopToastTimer);
+  clearTimeout(eventToastTimer);
+  eventToastTimer = setTimeout(() => t.classList.remove('show'), 3000);
 }
 </script>
 
@@ -1227,6 +1260,7 @@ function showEventToast(label){
     <div class="toast-val" id="toast-val">— ms</div>
     <div class="toast-sub">latency spike</div>
   </div>
+  <span class="toast-close">✕</span>
 </div>
 
 <!-- Hop / Event Toast -->
@@ -1237,6 +1271,7 @@ function showEventToast(label){
     <div class="toast-label">NETWORK EVENT</div>
     <div class="toast-val" id="hop-toast-text">Route changed</div>
   </div>
+  <span class="toast-close">✕</span>
 </div>
 
 <!-- Update Toast -->
@@ -1248,6 +1283,7 @@ function showEventToast(label){
     <div class="toast-val" id="update-toast-text">Checking...</div>
     <button class="toast-install-btn no-drag" id="update-install-btn" onclick="installUpdate()" style="display:none;">⬆ INSTALL &amp; RESTART</button>
   </div>
+  <span class="toast-close">✕</span>
 </div>
 
 <div id="event-modal" class="no-drag">
