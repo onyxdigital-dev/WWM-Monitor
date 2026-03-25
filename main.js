@@ -10,14 +10,22 @@ let overlay = null
 let useTray = true
 let isQuitting = false
 
+// ─── Simple file logger ───────────────────────────────────────────────────────
+function writeLog(msg) {
+  try {
+    const logPath = path.join(app.getPath('userData'), 'updater.log')
+    const line = `[${new Date().toISOString()}] ${msg}\n`
+    fs.appendFileSync(logPath, line)
+  } catch(e) {}
+}
+
 // ─── Auto Updater ─────────────────────────────────────────────────────────────
 let autoUpdater = null
 try {
   autoUpdater = require('electron-updater').autoUpdater
   autoUpdater.autoDownload = true
   autoUpdater.autoInstallOnAppQuit = true
-  autoUpdater.logger = require('electron-log')
-  autoUpdater.logger.transports.file.level = 'debug'
+  autoUpdater.logger = null
 } catch(e) {
   console.warn('[updater] electron-updater not available:', e.message)
 }
@@ -26,14 +34,17 @@ function initUpdater() {
   if (!autoUpdater) return
 
   autoUpdater.on('checking-for-update', () => {
+    writeLog('checking-for-update')
     sendUpdateStatus({ type: 'checking' })
   })
 
   autoUpdater.on('update-available', (info) => {
+    writeLog(`update-available: ${info.version}`)
     sendUpdateStatus({ type: 'available', version: info.version })
   })
 
   autoUpdater.on('update-not-available', () => {
+    writeLog('update-not-available')
     sendUpdateStatus({ type: 'not-available' })
   })
 
@@ -47,19 +58,20 @@ function initUpdater() {
   })
 
   autoUpdater.on('update-downloaded', (info) => {
+    writeLog(`update-downloaded: ${info.version}`)
     sendUpdateStatus({ type: 'downloaded', version: info.version })
   })
 
   autoUpdater.on('error', (err) => {
-    console.error('[updater] ERROR:', err)
+    writeLog(`ERROR: ${err.message}\nStack: ${err.stack}`)
     sendUpdateStatus({ type: 'error', message: err.message })
   })
 
-  // Auto-check on startup only in packaged builds
   if (app.isPackaged) {
     setTimeout(() => {
+      writeLog('auto-check on startup...')
       autoUpdater.checkForUpdates().catch(e => {
-        console.warn('[updater] auto-check failed:', e.message)
+        writeLog(`auto-check failed: ${e.message}`)
       })
     }, 4000)
   }
@@ -200,24 +212,15 @@ function getTrayIcon() {
   ]
   for (const p of candidates) {
     if (fs.existsSync(p)) {
-      console.log('[tray] trying icon:', p)
       try {
         let img = nativeImage.createFromPath(p)
         if (!img.isEmpty()) {
           img = img.resize({ width: 16, height: 16, quality: 'best' })
-          console.log('[tray] icon loaded, size:', img.getSize())
           return img
-        } else {
-          console.warn('[tray] icon isEmpty:', p)
         }
-      } catch(e) {
-        console.error('[tray] failed to load icon:', e.message)
-      }
-    } else {
-      console.warn('[tray] not found:', p)
+      } catch(e) {}
     }
   }
-  console.warn('[tray] using generated fallback icon')
   const size = 16
   const buf = Buffer.alloc(size * size * 4)
   for (let i = 0; i < size * size; i++) {
@@ -256,9 +259,7 @@ function createTray() {
     tray.on('double-click', () => {
       if (win) { win.show(); win.focus(); applyRoundedShape() }
     })
-    console.log('[tray] created successfully')
   } catch(e) {
-    console.error('[tray] error creating tray:', e.message)
     tray = null
   }
 }
@@ -286,8 +287,6 @@ function createWindow() {
   })
 
   win.loadFile(path.join(__dirname, 'src', 'index.html'))
-
-  // Open DevTools for debugging (remove after fix)
   win.webContents.openDevTools({ mode: 'detach' })
 
   win.once('ready-to-show', () => {
@@ -343,7 +342,6 @@ ipcMain.on('close', () => {
 
 ipcMain.on('set-tray', (_, enable) => {
   useTray = enable
-  console.log('[tray] minimize-to-tray:', enable)
 })
 
 ipcMain.on('set-startup', (_, enable) => {
@@ -353,7 +351,6 @@ ipcMain.on('set-startup', (_, enable) => {
 ipcMain.on('overlay-open',  () => createOverlay())
 ipcMain.on('overlay-close', () => closeOverlay())
 
-// Forward ping data to overlay
 ipcMain.on('ping-data', (_, data) => {
   if (overlay && !overlay.isDestroyed()) {
     overlay.webContents.send('ping-update', data)
@@ -392,8 +389,19 @@ ipcMain.on('update-check-manual', () => {
     setTimeout(() => sendUpdateStatus({ type: 'not-available' }), 1200)
     return
   }
+  writeLog('manual check triggered')
   autoUpdater.checkForUpdates().catch(e => {
-    console.error('[updater] manual check failed:', e)
+    writeLog(`manual check failed: ${e.message}\n${e.stack}`)
     sendUpdateStatus({ type: 'error', message: e.message })
   })
+})
+
+// IPC: read updater log for display in UI
+ipcMain.handle('get-updater-log', () => {
+  try {
+    const logPath = path.join(app.getPath('userData'), 'updater.log')
+    return fs.existsSync(logPath) ? fs.readFileSync(logPath, 'utf-8') : 'Keine Log-Einträge.'
+  } catch(e) {
+    return 'Fehler beim Lesen des Logs: ' + e.message
+  }
 })
