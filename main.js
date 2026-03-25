@@ -99,7 +99,7 @@ function startBackend() {
     ? path.join(process.resourcesPath, 'wwm_service.exe')
     : null
   const cmd  = (exe && fs.existsSync(exe)) ? exe : 'python'
-  const args = (exe && fs.existsSync(exe)) ? [] : [path.join(__dirname, 'backend.py')]
+  const args = (exe && fs.existsSync(exe)) ? [] : [path.join(__dirname, 'wwm_service.py')]
   const cwd  = app.isPackaged ? process.resourcesPath : __dirname
 
   backend = spawn(cmd, args, { stdio: ['ignore','pipe','pipe'], windowsHide: true, cwd })
