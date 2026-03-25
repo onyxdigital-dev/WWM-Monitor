@@ -8,6 +8,11 @@ DB_FILE="wwm_ping.db"
 LOG_FILE=f"ping_wwm_{datetime.now().strftime('%Y%m%d')}.log"
 GAME_EXES=["wwm.exe","wherewsindsmeet.exe","where winds meet-win64-shipping.exe","wherewındsmeet-win64-shipping.exe"]
 
+# Ports that belong to the real WWM game servers (not CDN/auth/analytics)
+GAME_PORTS=[4000, 9080, 7000, 7001, 7002, 8000, 8001, 9000, 9001]
+# Ports to always ignore (CDN, HTTPS, analytics)
+IGNORE_PORTS=[443, 80, 8080, 8443]
+
 state = {
     'running':False,'pid':None,'exe':None,'server_ip':None,'server_port':None,
     'geo_city':'','geo_country':'','geo_isp':'',
@@ -126,14 +131,33 @@ def find_game():
         except:pass
     return None,None
 
+def _is_private_ip(ip):
+    return any(ip.startswith(x) for x in ['127.','0.0.','192.168.','10.','172.'])
+
 def find_server_ip(pid):
-    """Returns (ip, port) tuple of the game server connection."""
+    """
+    Returns (ip, port) of the real WWM game server connection.
+    Priority order:
+      1. Known game ports (GAME_PORTS) — most likely the real server
+      2. Any other non-private, non-ignored port
+    Ignores IGNORE_PORTS (443, 80, etc.) which are CDN/auth/analytics.
+    """
     try:
-        for c in psutil.Process(pid).net_connections('tcp'):
-            if c.status=='ESTABLISHED' and c.raddr:
-                ip=c.raddr.ip
-                if not any(ip.startswith(x) for x in ['127.','0.0.','192.168.','10.','172.']):
-                    return ip, c.raddr.port
+        conns = [
+            c for c in psutil.Process(pid).net_connections('tcp')
+            if c.status == 'ESTABLISHED' and c.raddr and not _is_private_ip(c.raddr.ip)
+        ]
+
+        # Pass 1: prefer known game ports
+        for c in conns:
+            if c.raddr.port in GAME_PORTS:
+                return c.raddr.ip, c.raddr.port
+
+        # Pass 2: fallback — any non-ignored port
+        for c in conns:
+            if c.raddr.port not in IGNORE_PORTS:
+                return c.raddr.ip, c.raddr.port
+
     except:pass
     return None, None
 
