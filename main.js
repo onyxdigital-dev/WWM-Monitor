@@ -53,7 +53,6 @@ function initUpdater() {
     sendUpdateStatus({ type: 'error', message: err.message })
   })
 
-  // Auto-check on startup only in packaged builds
   if (app.isPackaged) {
     setTimeout(() => {
       autoUpdater.checkForUpdates().catch(e =>
@@ -93,20 +92,25 @@ function saveSettings(cfg) {
   }
 }
 
-// ─── Backend ──────────────────────────────────────────────────────────────────
+// ─── Backend (wwm_service) ──────────────────────────────────────────────────────────
 function startBackend() {
   const exe = app.isPackaged
-    ? path.join(process.resourcesPath, 'backend.exe')
+    ? path.join(process.resourcesPath, 'wwm_service.exe')
     : null
   const cmd  = (exe && fs.existsSync(exe)) ? exe : 'python'
-  const args = (exe && fs.existsSync(exe)) ? [] : [path.join(__dirname, 'backend.py')]
+  const args = (exe && fs.existsSync(exe)) ? [] : [path.join(__dirname, 'wwm_service.py')]
   const cwd  = app.isPackaged ? process.resourcesPath : __dirname
 
-  backend = spawn(cmd, args, { stdio: ['ignore','pipe','pipe'], windowsHide: true, cwd })
-  backend.stdout.on('data', d => console.log('[backend]', d.toString().trim()))
-  backend.stderr.on('data', d => console.error('[backend ERR]', d.toString().trim()))
-  backend.on('error',  e    => console.error('[backend] spawn error:', e.message))
-  backend.on('close',  code => console.log('[backend] exited', code))
+  backend = spawn(cmd, args, {
+    stdio: ['ignore', 'pipe', 'pipe'],
+    windowsHide: true,   // kein CMD-Fenster
+    detached: false,
+    cwd
+  })
+  backend.stdout.on('data', d => console.log('[service]', d.toString().trim()))
+  backend.stderr.on('data', d => console.error('[service ERR]', d.toString().trim()))
+  backend.on('error',  e    => console.error('[service] spawn error:', e.message))
+  backend.on('close',  code => console.log('[service] exited', code))
 }
 
 // ─── Kill backend ─────────────────────────────────────────────────────────────
@@ -198,24 +202,15 @@ function getTrayIcon() {
   ]
   for (const p of candidates) {
     if (fs.existsSync(p)) {
-      console.log('[tray] trying icon:', p)
       try {
         let img = nativeImage.createFromPath(p)
         if (!img.isEmpty()) {
           img = img.resize({ width: 16, height: 16, quality: 'best' })
-          console.log('[tray] icon loaded, size:', img.getSize())
           return img
-        } else {
-          console.warn('[tray] icon isEmpty:', p)
         }
-      } catch(e) {
-        console.error('[tray] failed to load icon:', e.message)
-      }
-    } else {
-      console.warn('[tray] not found:', p)
+      } catch(e) {}
     }
   }
-  console.warn('[tray] using generated fallback icon')
   const size = 16
   const buf = Buffer.alloc(size * size * 4)
   for (let i = 0; i < size * size; i++) {
@@ -254,7 +249,6 @@ function createTray() {
     tray.on('double-click', () => {
       if (win) { win.show(); win.focus(); applyRoundedShape() }
     })
-    console.log('[tray] created successfully')
   } catch(e) {
     console.error('[tray] error creating tray:', e.message)
     tray = null
@@ -337,7 +331,6 @@ ipcMain.on('close', () => {
 
 ipcMain.on('set-tray', (_, enable) => {
   useTray = enable
-  console.log('[tray] minimize-to-tray:', enable)
 })
 
 ipcMain.on('set-startup', (_, enable) => {
@@ -347,7 +340,6 @@ ipcMain.on('set-startup', (_, enable) => {
 ipcMain.on('overlay-open',  () => createOverlay())
 ipcMain.on('overlay-close', () => closeOverlay())
 
-// Forward ping data to overlay
 ipcMain.on('ping-data', (_, data) => {
   if (overlay && !overlay.isDestroyed()) {
     overlay.webContents.send('ping-update', data)
