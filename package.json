@@ -36,8 +36,8 @@
     },
     "extraResources": [
       {
-        "from": "dist/backend.exe",
-        "to": "backend.exe"
+        "from": "dist/wwm_service.exe",
+        "to": "wwm_service.exe"
       },
       {
         "from": "assets/",
