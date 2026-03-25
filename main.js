@@ -282,12 +282,11 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       webSecurity: false,
-      devTools: true,
+      devTools: false,
     }
   })
 
   win.loadFile(path.join(__dirname, 'src', 'index.html'))
-  win.webContents.openDevTools({ mode: 'detach' })
 
   win.once('ready-to-show', () => {
     const cfg = loadSettings()
@@ -396,7 +395,6 @@ ipcMain.on('update-check-manual', () => {
   })
 })
 
-// IPC: read updater log for display in UI
 ipcMain.handle('get-updater-log', () => {
   try {
     const logPath = path.join(app.getPath('userData'), 'updater.log')
