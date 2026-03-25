@@ -13,6 +13,7 @@
   "build": {
     "appId": "com.onyx.wwm-monitor",
     "productName": "WWM Monitor",
+    "artifactName": "WWM_Monitor_Setup.exe",
     "publish": [
       {
         "provider": "github",
