@@ -522,6 +522,8 @@ function toggleOverlay() {
 
 // ── Live ───────────────────────────────────────────────────────────────────
 let graphHistory=[], jitterHistory=[];
+let lastGraphLen=-1, lastJitterLen=-1;
+let lastBadgeKey='';
 
 function updateLive(d) {
   const ms=d.last_ms, count=d.count, lost=d.lost, recv=count-lost;
@@ -626,21 +628,36 @@ function updateLive(d) {
     spikeEl.style.display='none';
   }
 
-  const badges=document.getElementById('badges');
-  badges.innerHTML='';
-  (d.history||[]).slice(-10).forEach(v=>{
-    const b=document.createElement('div');
-    if (v===null)  {b.className='badge badge-tout';b.textContent='TOUT';}
-    else if(v>=CRIT){b.className='badge badge-crit';b.textContent=`${v} ms`;}
-    else if(v>=WARN){b.className='badge badge-warn';b.textContent=`${v} ms`;}
-    else            {b.className='badge badge-ok';  b.textContent=`${v} ms`;}
-    badges.appendChild(b);
-  });
+  // ── Badges: nur neu rendern wenn sich die letzten 10 Pings geändert haben
+  const newHistory = d.history||[];
+  const badgeSlice = newHistory.slice(-10);
+  const badgeKey = badgeSlice.join(',');
+  if (badgeKey !== lastBadgeKey) {
+    lastBadgeKey = badgeKey;
+    const badges=document.getElementById('badges');
+    badges.innerHTML='';
+    badgeSlice.forEach(v=>{
+      const b=document.createElement('div');
+      if (v===null)  {b.className='badge badge-tout';b.textContent='TOUT';}
+      else if(v>=CRIT){b.className='badge badge-crit';b.textContent=`${v} ms`;}
+      else if(v>=WARN){b.className='badge badge-warn';b.textContent=`${v} ms`;}
+      else            {b.className='badge badge-ok';  b.textContent=`${v} ms`;}
+      badges.appendChild(b);
+    });
+  }
 
-  graphHistory=d.history||[];
-  jitterHistory=d.jitter_history||[];
-  drawGraph();
-  drawJitter();
+  // ── Graphen: nur neu zeichnen wenn neue Datenpunkte dazugekommen sind
+  const newGraph = d.history||[];
+  const newJitter = d.jitter_history||[];
+  const graphChanged  = newGraph.length  !== lastGraphLen  || (newGraph.length  > 0 && newGraph[newGraph.length-1]   !== graphHistory[graphHistory.length-1]);
+  const jitterChanged = newJitter.length !== lastJitterLen || (newJitter.length > 0 && newJitter[newJitter.length-1] !== jitterHistory[jitterHistory.length-1]);
+
+  graphHistory  = newGraph;
+  jitterHistory = newJitter;
+
+  if (graphChanged)  { lastGraphLen  = graphHistory.length;  drawGraph(); }
+  if (jitterChanged) { lastJitterLen = jitterHistory.length; drawJitter(); }
+
   updateMap(d);
 
   if (window.electronAPI && window.electronAPI.sendPingData)
@@ -648,8 +665,6 @@ function updateLive(d) {
 }
 
 // ── Canvas-Resize-Helper ───────────────────────────────────────────────────────
-// Setzt canvas.width/height NUR wenn sie sich wirklich geändert haben.
-// Rückgabe: true = Resize erfolgt (Context wurde zurückgesetzt), false = unverandert.
 function syncCanvasSize(canvas, fallbackW, fallbackH) {
   const wrap = canvas.parentElement;
   const W = wrap.offsetWidth  || fallbackW;
