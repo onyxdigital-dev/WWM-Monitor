@@ -14,6 +14,10 @@ GAME_PORTS=[4000, 9080, 7000, 7001, 7002, 8000, 8001, 9000, 9001]
 # Ports to always ignore (CDN, HTTPS, analytics)
 IGNORE_PORTS=[443, 80, 8080, 8443]
 
+# find_game() cache
+_game_cache = {'pid': None, 'exe': None, 'ts': 0.0}
+GAME_SCAN_INTERVAL = 10  # Sekunden zwischen vollen Prozess-Scans
+
 state = {
     'running':False,'pid':None,'exe':None,'server_ip':None,'server_port':None,
     'geo_city':'','geo_country':'','geo_isp':'',
@@ -71,13 +75,12 @@ def cleanup_old_data():
         db.commit()
 
 def cleanup_loop():
-    # einmal direkt beim Start, dann alle 24h
     while True:
         try:
             cleanup_old_data()
         except Exception as e:
             print(f'[cleanup] error: {e}')
-        time.sleep(86400)  # 24h
+        time.sleep(86400)
 
 def save_ping(sid,ip,ms,st,j,router_ms=None,dns_ms=None):
     with _db_lock:
@@ -162,12 +165,36 @@ def export_csv(sid=None):
     except:return ""
 
 def find_game():
-    for p in psutil.process_iter(['pid','name']):
+    """
+    Gibt (pid, exe) zurueck.
+    Macht nur alle GAME_SCAN_INTERVAL Sekunden einen echten Prozess-Scan.
+    Dazwischen wird nur geprueft ob die gecachte PID noch lebt.
+    """
+    global _game_cache
+    now = time.monotonic()
+
+    # Cache-Treffer: PID noch bekannt und noch am Leben
+    if _game_cache['pid'] and (now - _game_cache['ts']) < GAME_SCAN_INTERVAL:
+        if psutil.pid_exists(_game_cache['pid']):
+            return _game_cache['pid'], _game_cache['exe']
+        else:
+            # Prozess gestorben -> Cache sofort invalidieren
+            _game_cache = {'pid': None, 'exe': None, 'ts': 0.0}
+            return None, None
+
+    # Voller Scan
+    _game_cache['ts'] = now
+    for p in psutil.process_iter(['pid', 'name']):
         try:
             if p.info['name'] and p.info['name'].lower() in GAME_EXES:
-                return p.info['pid'],p.info['name']
-        except:pass
-    return None,None
+                _game_cache['pid'] = p.info['pid']
+                _game_cache['exe'] = p.info['name']
+                return _game_cache['pid'], _game_cache['exe']
+        except: pass
+
+    _game_cache['pid'] = None
+    _game_cache['exe'] = None
+    return None, None
 
 def _is_private_ip(ip):
     return any(ip.startswith(x) for x in ['127.','0.0.','192.168.','10.','172.'])
