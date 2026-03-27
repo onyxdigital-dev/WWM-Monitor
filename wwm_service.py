@@ -28,94 +28,105 @@ state = {
     'events':[],
 }
 
+# --- DB Connection Pool ---
+_db_conn = None
+_db_lock = threading.Lock()
+
+def get_db():
+    global _db_conn
+    if _db_conn is None:
+        _db_conn = sqlite3.connect(DB_FILE, check_same_thread=False)
+        _db_conn.row_factory = sqlite3.Row
+    return _db_conn
+
 def init_db():
-    c=sqlite3.connect(DB_FILE)
-    c.execute("""CREATE TABLE IF NOT EXISTS pings(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,ts TEXT,session_id TEXT,
-        server_ip TEXT,ping_ms INTEGER,status TEXT,jitter INTEGER,
-        router_ms INTEGER,dns_ms INTEGER)""")
-    c.execute("""CREATE TABLE IF NOT EXISTS server_switches(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        switched_at TEXT,from_ip TEXT,to_ip TEXT,
-        duration_seconds INTEGER,session_id TEXT)""")
-    c.execute("""CREATE TABLE IF NOT EXISTS events(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        ts TEXT,label TEXT,session_id TEXT,ping_ms INTEGER)""")
-    try:
-        c.execute("ALTER TABLE pings ADD COLUMN router_ms INTEGER")
-        c.execute("ALTER TABLE pings ADD COLUMN dns_ms INTEGER")
-    except: pass
-    c.commit();c.close()
+    with _db_lock:
+        c = get_db()
+        c.execute("""CREATE TABLE IF NOT EXISTS pings(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,ts TEXT,session_id TEXT,
+            server_ip TEXT,ping_ms INTEGER,status TEXT,jitter INTEGER,
+            router_ms INTEGER,dns_ms INTEGER)""")
+        c.execute("""CREATE TABLE IF NOT EXISTS server_switches(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            switched_at TEXT,from_ip TEXT,to_ip TEXT,
+            duration_seconds INTEGER,session_id TEXT)""")
+        c.execute("""CREATE TABLE IF NOT EXISTS events(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ts TEXT,label TEXT,session_id TEXT,ping_ms INTEGER)""")
+        try:
+            c.execute("ALTER TABLE pings ADD COLUMN router_ms INTEGER")
+            c.execute("ALTER TABLE pings ADD COLUMN dns_ms INTEGER")
+        except: pass
+        c.commit()
 
 def save_ping(sid,ip,ms,st,j,router_ms=None,dns_ms=None):
-    c=sqlite3.connect(DB_FILE)
-    c.execute("INSERT INTO pings VALUES(NULL,?,?,?,?,?,?,?,?)",
-        (datetime.now().isoformat(),sid,ip,ms,st,j,router_ms,dns_ms))
-    c.commit();c.close()
+    with _db_lock:
+        get_db().execute("INSERT INTO pings VALUES(NULL,?,?,?,?,?,?,?,?)",
+            (datetime.now().isoformat(),sid,ip,ms,st,j,router_ms,dns_ms))
+        get_db().commit()
 
 def save_switch(sid,from_ip,to_ip,duration_seconds):
-    c=sqlite3.connect(DB_FILE)
-    c.execute("INSERT INTO server_switches VALUES(NULL,?,?,?,?,?)",
-        (datetime.now().isoformat(),from_ip,to_ip,duration_seconds,sid))
-    c.commit();c.close()
+    with _db_lock:
+        get_db().execute("INSERT INTO server_switches VALUES(NULL,?,?,?,?,?)",
+            (datetime.now().isoformat(),from_ip,to_ip,duration_seconds,sid))
+        get_db().commit()
 
 def save_event(sid,label,ping_ms):
-    c=sqlite3.connect(DB_FILE)
-    c.execute("INSERT INTO events VALUES(NULL,?,?,?,?)",
-        (datetime.now().isoformat(),label,sid,ping_ms))
-    c.commit();c.close()
+    with _db_lock:
+        get_db().execute("INSERT INTO events VALUES(NULL,?,?,?,?)",
+            (datetime.now().isoformat(),label,sid,ping_ms))
+        get_db().commit()
 
 def get_sessions():
     try:
-        c=sqlite3.connect(DB_FILE);c.row_factory=sqlite3.Row
-        rows=c.execute("""SELECT session_id,server_ip,COUNT(*) as total,
-            AVG(CASE WHEN ping_ms>0 THEN ping_ms END) as avg,
-            MIN(CASE WHEN ping_ms>0 THEN ping_ms END) as mn,
-            MAX(CASE WHEN ping_ms>0 THEN ping_ms END) as mx,
-            AVG(jitter) as jitter,
-            SUM(CASE WHEN status='TIMEOUT' THEN 1 ELSE 0 END) as timeouts
-            FROM pings GROUP BY session_id ORDER BY MIN(id) DESC LIMIT 20""").fetchall()
-        c.close();return [dict(r) for r in rows]
+        with _db_lock:
+            rows=get_db().execute("""SELECT session_id,server_ip,COUNT(*) as total,
+                AVG(CASE WHEN ping_ms>0 THEN ping_ms END) as avg,
+                MIN(CASE WHEN ping_ms>0 THEN ping_ms END) as mn,
+                MAX(CASE WHEN ping_ms>0 THEN ping_ms END) as mx,
+                AVG(jitter) as jitter,
+                SUM(CASE WHEN status='TIMEOUT' THEN 1 ELSE 0 END) as timeouts
+                FROM pings GROUP BY session_id ORDER BY MIN(id) DESC LIMIT 20""").fetchall()
+        return [dict(r) for r in rows]
     except:return []
 
 def get_total_stats():
     try:
-        c=sqlite3.connect(DB_FILE);c.row_factory=sqlite3.Row
-        r=c.execute("""SELECT COUNT(*) as total,
-            AVG(CASE WHEN ping_ms>0 THEN ping_ms END) as avg,
-            MIN(CASE WHEN ping_ms>0 THEN ping_ms END) as mn,
-            MAX(CASE WHEN ping_ms>0 THEN ping_ms END) as mx,
-            SUM(CASE WHEN status='TIMEOUT' THEN 1 ELSE 0 END) as timeouts,
-            COUNT(DISTINCT session_id) as sessions FROM pings""").fetchone()
-        c.close();return dict(r) if r else None
+        with _db_lock:
+            r=get_db().execute("""SELECT COUNT(*) as total,
+                AVG(CASE WHEN ping_ms>0 THEN ping_ms END) as avg,
+                MIN(CASE WHEN ping_ms>0 THEN ping_ms END) as mn,
+                MAX(CASE WHEN ping_ms>0 THEN ping_ms END) as mx,
+                SUM(CASE WHEN status='TIMEOUT' THEN 1 ELSE 0 END) as timeouts,
+                COUNT(DISTINCT session_id) as sessions FROM pings""").fetchone()
+        return dict(r) if r else None
     except:return None
 
 def get_server_switches():
     try:
-        c=sqlite3.connect(DB_FILE);c.row_factory=sqlite3.Row
-        rows=c.execute("""SELECT switched_at,from_ip,to_ip,duration_seconds,session_id
-            FROM server_switches ORDER BY id DESC LIMIT 50""").fetchall()
-        c.close();return [dict(r) for r in rows]
+        with _db_lock:
+            rows=get_db().execute("""SELECT switched_at,from_ip,to_ip,duration_seconds,session_id
+                FROM server_switches ORDER BY id DESC LIMIT 50""").fetchall()
+        return [dict(r) for r in rows]
     except:return []
 
 def get_events(sid=None):
     try:
-        c=sqlite3.connect(DB_FILE);c.row_factory=sqlite3.Row
-        if sid:
-            rows=c.execute("SELECT ts,label,ping_ms FROM events WHERE session_id=? ORDER BY id DESC LIMIT 50",(sid,)).fetchall()
-        else:
-            rows=c.execute("SELECT ts,label,ping_ms FROM events ORDER BY id DESC LIMIT 50").fetchall()
-        c.close();return [dict(r) for r in rows]
+        with _db_lock:
+            if sid:
+                rows=get_db().execute("SELECT ts,label,ping_ms FROM events WHERE session_id=? ORDER BY id DESC LIMIT 50",(sid,)).fetchall()
+            else:
+                rows=get_db().execute("SELECT ts,label,ping_ms FROM events ORDER BY id DESC LIMIT 50").fetchall()
+        return [dict(r) for r in rows]
     except:return []
 
 def export_csv(sid=None):
     try:
-        c=sqlite3.connect(DB_FILE);c.row_factory=sqlite3.Row
-        if sid:
-            rows=c.execute("SELECT * FROM pings WHERE session_id=? ORDER BY id",(sid,)).fetchall()
-        else:
-            rows=c.execute("SELECT * FROM pings ORDER BY id").fetchall()
-        c.close()
+        with _db_lock:
+            if sid:
+                rows=get_db().execute("SELECT * FROM pings WHERE session_id=? ORDER BY id",(sid,)).fetchall()
+            else:
+                rows=get_db().execute("SELECT * FROM pings ORDER BY id").fetchall()
         lines=["id,ts,session_id,server_ip,ping_ms,status,jitter,router_ms,dns_ms"]
         for r in rows:
             d=dict(r)
@@ -253,7 +264,7 @@ def monitor_loop():
         threading.Thread(target=do_tracert,daemon=True).start()
         while True:
             if not find_game()[0]:break
-            if s['count']>0 and s['count']%30==0:
+            if s['count']>0 and s['count']%10==0:
                 nip,nport=find_server_ip(pid)
                 if nip and nip!=server_ip:
                     duration=int((datetime.now()-ip_connected_since).total_seconds())
