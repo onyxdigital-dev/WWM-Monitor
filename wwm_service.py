@@ -80,7 +80,9 @@ def save_event(sid,label,ping_ms):
 def get_sessions():
     try:
         with _db_lock:
-            rows=get_db().execute("""SELECT session_id,server_ip,COUNT(*) as total,
+            rows=get_db().execute("""SELECT session_id,
+                GROUP_CONCAT(DISTINCT server_ip) as server_ip,
+                COUNT(*) as total,
                 AVG(CASE WHEN ping_ms>0 THEN ping_ms END) as avg,
                 MIN(CASE WHEN ping_ms>0 THEN ping_ms END) as mn,
                 MAX(CASE WHEN ping_ms>0 THEN ping_ms END) as mx,
