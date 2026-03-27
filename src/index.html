@@ -874,31 +874,82 @@ function loadWorldMap(){
     .then(r=>r.json()).then(topo=>{worldPolygons=decodeTopo(topo);}).catch(()=>{});
 }
 
-function updateMap(d){
-  document.getElementById('geo-country').textContent=d.geo_country||'—';
-  document.getElementById('geo-city').textContent=d.geo_city||'—';
-  document.getElementById('geo-isp').textContent=d.geo_isp||'—';
-  document.getElementById('geo-ip').textContent=d.server_ip||'—';
-  document.getElementById('geo-ping').textContent=(d.last_ms!==null&&d.last_ms!==undefined)?d.last_ms+' ms':'— ms';
-  if(!d.server_ip||d.server_ip===lastMappedIp||(!d.geo_city&&!d.geo_country))return;
-  if(serverLatLon&&lastMappedIp){
-    const alreadyStored=pastServers.some(p=>p.ip===lastMappedIp);
-    if(!alreadyStored){
-      pastServers.push({ip:lastMappedIp,lat:serverLatLon[0],lon:serverLatLon[1],label:document.getElementById('map-label').textContent});
-      if(pastServers.length>20)pastServers.shift();
+/**
+ * Resolves lat/lon for a server IP using a 3-step priority chain:
+ *  1. geo_lat/geo_lon aus dem Backend (ip-api.com) — schnellster Weg
+ *  2. Nominatim-Suche mit "City, Country"-Label
+ *  3. Nominatim IP-Fallback: direkte Suche nach der rohen Server-IP
+ */
+function resolveAndZoom(lat, lon, label, ip) {
+  // Stufe 1: Backend hat bereits Koordinaten geliefert
+  if (lat && lon) {
+    serverLatLon = [lat, lon];
+    smoothZoomTo(lon, lat, 5);
+    return;
+  }
+  // Stufe 2: Nominatim mit Geo-Label (City, Country)
+  const query = label && label !== ip ? label : null;
+  const tryNominatimIp = () => {
+    // Stufe 3: Nominatim IP-Fallback — direkte IP-Suche
+    fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(ip)}&format=json&limit=1`)
+      .then(r => r.json())
+      .then(res => {
+        if (!res.length) return;
+        const newLat = parseFloat(res[0].lat), newLon = parseFloat(res[0].lon);
+        serverLatLon = [newLat, newLon];
+        smoothZoomTo(newLon, newLat, 5);
+      }).catch(() => {});
+  };
+  if (query) {
+    fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`)
+      .then(r => r.json())
+      .then(res => {
+        if (res.length) {
+          const newLat = parseFloat(res[0].lat), newLon = parseFloat(res[0].lon);
+          serverLatLon = [newLat, newLon];
+          smoothZoomTo(newLon, newLat, 5);
+        } else {
+          tryNominatimIp(); // Label hat nichts ergeben → IP-Fallback
+        }
+      }).catch(tryNominatimIp);
+  } else {
+    tryNominatimIp();
+  }
+}
+
+function updateMap(d) {
+  document.getElementById('geo-country').textContent = d.geo_country || '—';
+  document.getElementById('geo-city').textContent    = d.geo_city    || '—';
+  document.getElementById('geo-isp').textContent     = d.geo_isp     || '—';
+  document.getElementById('geo-ip').textContent      = d.server_ip   || '—';
+  document.getElementById('geo-ping').textContent    = (d.last_ms !== null && d.last_ms !== undefined) ? d.last_ms + ' ms' : '— ms';
+
+  // Neues IP oder noch gar kein IP → nix tun
+  if (!d.server_ip || d.server_ip === lastMappedIp) return;
+
+  // Alten Server in pastServers sichern
+  if (serverLatLon && lastMappedIp) {
+    if (!pastServers.some(p => p.ip === lastMappedIp)) {
+      pastServers.push({
+        ip: lastMappedIp,
+        lat: serverLatLon[0], lon: serverLatLon[1],
+        label: document.getElementById('map-label').textContent
+      });
+      if (pastServers.length > 20) pastServers.shift();
     }
   }
-  lastMappedIp=d.server_ip;
-  const label=[d.geo_city,d.geo_country].filter(Boolean).join(', ')||d.server_ip;
-  document.getElementById('map-label').textContent=label;
-  fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(label)}&format=json&limit=1`)
-    .then(r=>r.json())
-    .then(res=>{
-      if(!res.length)return;
-      const newLat=parseFloat(res[0].lat),newLon=parseFloat(res[0].lon);
-      serverLatLon=[newLat,newLon];
-      smoothZoomTo(newLon,newLat,5);
-    }).catch(()=>{});
+
+  lastMappedIp = d.server_ip;
+  const label = [d.geo_city, d.geo_country].filter(Boolean).join(', ') || d.server_ip;
+  document.getElementById('map-label').textContent = label;
+
+  // Koordinaten-Auflösung: Backend-Coords → Nominatim-Label → Nominatim-IP
+  resolveAndZoom(
+    d.geo_lat && Math.abs(d.geo_lat) > 0.01 ? d.geo_lat : null,
+    d.geo_lon && Math.abs(d.geo_lon) > 0.01 ? d.geo_lon : null,
+    label,
+    d.server_ip
+  );
 }
 
 window.addEventListener('load',()=>{
@@ -926,10 +977,8 @@ function updateDash(rows,stats){
     document.getElementById('d-min').textContent=stats.mn?stats.mn+' ms':'—';
     document.getElementById('d-max').textContent=stats.mx?stats.mx+' ms':'—';
     document.getElementById('d-loss').textContent=loss+'%';
-    // FIXED: d-jitter zeigt echten avg jitter, nicht avg ping
     document.getElementById('d-jitter').textContent=stats.jitter!=null?Math.round(stats.jitter)+' ms':'—';
     document.getElementById('d-sessions').textContent=stats.sessions||'—';
-    // FIXED: d-spikes zeigt echte spikes, nicht timeouts
     document.getElementById('d-spikes').textContent=stats.spikes!=null?stats.spikes:'—';
   }
   const tbody=document.getElementById('sess-tbody');
@@ -937,7 +986,6 @@ function updateDash(rows,stats){
   (rows||[]).forEach(r=>{
     const loss=r.total?Math.round(r.timeouts*100/r.total):0;
     const tr=document.createElement('tr');
-    // FIXED: letzte Spalte zeigt r.spikes statt r.timeouts
     [r.session_id,r.server_ip||'—',r.total,
      r.avg?Math.round(r.avg):'—',r.mn||'—',r.mx||'—',
      r.jitter?Math.round(r.jitter):'—',loss+'%',r.spikes!=null?r.spikes:'—'
