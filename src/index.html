@@ -926,9 +926,11 @@ function updateDash(rows,stats){
     document.getElementById('d-min').textContent=stats.mn?stats.mn+' ms':'—';
     document.getElementById('d-max').textContent=stats.mx?stats.mx+' ms':'—';
     document.getElementById('d-loss').textContent=loss+'%';
-    document.getElementById('d-jitter').textContent=stats.avg?Math.round(stats.avg):'—';
+    // FIXED: d-jitter zeigt echten avg jitter, nicht avg ping
+    document.getElementById('d-jitter').textContent=stats.jitter!=null?Math.round(stats.jitter)+' ms':'—';
     document.getElementById('d-sessions').textContent=stats.sessions||'—';
-    document.getElementById('d-spikes').textContent=stats.timeouts||0;
+    // FIXED: d-spikes zeigt echte spikes, nicht timeouts
+    document.getElementById('d-spikes').textContent=stats.spikes!=null?stats.spikes:'—';
   }
   const tbody=document.getElementById('sess-tbody');
   tbody.innerHTML='';
