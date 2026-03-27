@@ -1,10 +1,11 @@
 # pip install websockets psutil requests
 import asyncio, websockets, json, threading, time, sqlite3, re, subprocess, requests, psutil, socket
-from datetime import datetime
+from datetime import datetime, timedelta
 from collections import deque
 
 WARN_MS=80; CRIT_MS=150; INTERVAL=2; SPIKE_THRESH=10; HISTORY=50
 DB_FILE="wwm_ping.db"
+DB_RETENTION_DAYS=30
 LOG_FILE=f"ping_wwm_{datetime.now().strftime('%Y%m%d')}.log"
 GAME_EXES=["wwm.exe","wherewsindsmeet.exe","where winds meet-win64-shipping.exe","wherewındsmeet-win64-shipping.exe"]
 
@@ -58,6 +59,25 @@ def init_db():
             c.execute("ALTER TABLE pings ADD COLUMN dns_ms INTEGER")
         except: pass
         c.commit()
+
+def cleanup_old_data():
+    cutoff = (datetime.now() - timedelta(days=DB_RETENTION_DAYS)).isoformat()
+    with _db_lock:
+        db = get_db()
+        db.execute("DELETE FROM pings WHERE ts < ?", (cutoff,))
+        db.execute("DELETE FROM events WHERE ts < ?", (cutoff,))
+        db.execute("DELETE FROM server_switches WHERE switched_at < ?", (cutoff,))
+        db.execute("VACUUM")
+        db.commit()
+
+def cleanup_loop():
+    # einmal direkt beim Start, dann alle 24h
+    while True:
+        try:
+            cleanup_old_data()
+        except Exception as e:
+            print(f'[cleanup] error: {e}')
+        time.sleep(86400)  # 24h
 
 def save_ping(sid,ip,ms,st,j,router_ms=None,dns_ms=None):
     with _db_lock:
@@ -391,7 +411,8 @@ async def broadcaster():
 async def main():
     global CLIENTS
     init_db()
-    threading.Thread(target=monitor_loop,daemon=True).start()
+    threading.Thread(target=cleanup_loop, daemon=True).start()
+    threading.Thread(target=monitor_loop, daemon=True).start()
     async with websockets.serve(handler,'localhost',7373):
         await broadcaster()
 
