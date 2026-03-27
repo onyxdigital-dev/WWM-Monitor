@@ -648,6 +648,8 @@ function updateLive(d) {
 }
 
 // ── Canvas-Resize-Helper ───────────────────────────────────────────────────────
+// Setzt canvas.width/height NUR wenn sie sich wirklich geändert haben.
+// Rückgabe: true = Resize erfolgt (Context wurde zurückgesetzt), false = unverandert.
 function syncCanvasSize(canvas, fallbackW, fallbackH) {
   const wrap = canvas.parentElement;
   const W = wrap.offsetWidth  || fallbackW;
@@ -725,26 +727,6 @@ const MIN_SCALE=0.8, MAX_SCALE=12;
 const MAP_W=1000, MAP_H=500;
 let pastServers=[];
 let zoomAnim=null;
-
-// ── 30-fps-Throttle für die Map-Schleife ─────────────────────────────────────
-const MAP_FPS = 30;
-const MAP_FRAME_MS = 1000 / MAP_FPS;   // ~33.33 ms
-let mapLastFrameTs = 0;
-
-function animateMap(now) {
-  mapAnimFrame = requestAnimationFrame(animateMap);
-  // Während Zoom-Animation immer mit vollem FPS rendern, sonst auf 30fps drosseln
-  if (!zoomAnim && (now - mapLastFrameTs) < MAP_FRAME_MS) return;
-  mapLastFrameTs = now;
-  mapPulse++;
-  drawMapCanvas();
-}
-
-function clampView(W,H){
-  const mapW=W*view.scale,mapH=H*view.scale;
-  view.x=Math.min(W*0.5,Math.max(W-mapW-W*0.5,view.x));
-  view.y=Math.min(H*0.5,Math.max(H-mapH-H*0.5,view.y));
-}
 
 function smoothZoomTo(targetLon, targetLat, targetScale) {
   if (zoomAnim) cancelAnimationFrame(zoomAnim);
@@ -840,6 +822,13 @@ function drawMapCanvas() {
     ctx.fillStyle='rgba(255,255,255,0.15)';ctx.font='10px Segoe UI';
     ctx.fillText('Scroll to zoom  ·  Drag to pan  ·  Dblclick → server',W/2-130,H-10);
   }
+}
+
+function animateMap(){mapPulse++;drawMapCanvas();mapAnimFrame=requestAnimationFrame(animateMap);}
+function clampView(W,H){
+  const mapW=W*view.scale,mapH=H*view.scale;
+  view.x=Math.min(W*0.5,Math.max(W-mapW-W*0.5,view.x));
+  view.y=Math.min(H*0.5,Math.max(H-mapH-H*0.5,view.y));
 }
 
 function initMapInteraction(){
@@ -965,7 +954,7 @@ function updateMap(d) {
 window.addEventListener('load',()=>{
   loadWorldMap();
   initMapInteraction();
-  animateMap(0);
+  animateMap();
   loadSettings();
   initUpdater();
   window.addEventListener('resize',()=>{
