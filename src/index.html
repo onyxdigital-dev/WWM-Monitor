@@ -520,6 +520,20 @@ function toggleOverlay() {
   }
 }
 
+// ── connected_since Timer (#4) ─────────────────────────────────────────────
+// Stored once from WS state, ticked independently every second
+let connectedSinceTs = null;
+
+setInterval(() => {
+  const el = document.getElementById('i-connected-since');
+  if (!el) return;
+  if (!connectedSinceTs) { el.textContent = ''; return; }
+  const diff = Math.floor((Date.now() - connectedSinceTs) / 1000);
+  const h = Math.floor(diff / 3600), m = Math.floor(diff % 3600 / 60), s = diff % 60;
+  const dur = h > 0 ? `${h}h ${m}m ${s}s` : m > 0 ? `${m}m ${s}s` : `${s}s`;
+  el.textContent = new Date(connectedSinceTs).toLocaleTimeString('de-DE') + '  +' + dur;
+}, 1000);
+
 // ── Live ───────────────────────────────────────────────────────────────────
 let graphHistory=[], jitterHistory=[];
 let lastGraphLen=-1, lastJitterLen=-1;
@@ -549,14 +563,8 @@ function updateLive(d) {
   document.getElementById('i-proc').textContent=d.exe?`${d.exe} (${d.pid})`:'—';
   document.getElementById('i-sess').textContent=d.ts;
 
-  if (d.connected_since) {
-    const diff=Math.floor((Date.now()-new Date(d.connected_since).getTime())/1000);
-    const h=Math.floor(diff/3600),m=Math.floor(diff%3600/60),s=diff%60;
-    const dur=h>0?`${h}h ${m}m ${s}s`:m>0?`${m}m ${s}s`:`${s}s`;
-    document.getElementById('i-connected-since').textContent=new Date(d.connected_since).toLocaleTimeString('de-DE')+'  +'+dur;
-  } else {
-    document.getElementById('i-connected-since').textContent='';
-  }
+  // Only update the timestamp reference; the setInterval above handles display
+  connectedSinceTs = d.connected_since ? new Date(d.connected_since).getTime() : null;
 
   const dpRouter=document.getElementById('dp-router');
   const dpDns=document.getElementById('dp-dns');
@@ -900,38 +908,11 @@ function loadWorldMap(){
     .then(r=>r.json()).then(topo=>{worldPolygons=decodeTopo(topo);}).catch(()=>{});
 }
 
-function resolveAndZoom(lat, lon, label, ip) {
-  if (lat && lon) {
-    serverLatLon = [lat, lon];
-    smoothZoomTo(lon, lat, 5);
-    return;
-  }
-  const query = label && label !== ip ? label : null;
-  const tryNominatimIp = () => {
-    fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(ip)}&format=json&limit=1`)
-      .then(r => r.json())
-      .then(res => {
-        if (!res.length) return;
-        const newLat = parseFloat(res[0].lat), newLon = parseFloat(res[0].lon);
-        serverLatLon = [newLat, newLon];
-        smoothZoomTo(newLon, newLat, 5);
-      }).catch(() => {});
-  };
-  if (query) {
-    fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`)
-      .then(r => r.json())
-      .then(res => {
-        if (res.length) {
-          const newLat = parseFloat(res[0].lat), newLon = parseFloat(res[0].lon);
-          serverLatLon = [newLat, newLon];
-          smoothZoomTo(newLon, newLat, 5);
-        } else {
-          tryNominatimIp();
-        }
-      }).catch(tryNominatimIp);
-  } else {
-    tryNominatimIp();
-  }
+// ── resolveAndZoom: nur Backend-GeoIP (#6, kein Nominatim-Fallback mehr) ──
+function resolveAndZoom(lat, lon, label) {
+  if (!lat || !lon) return; // kein gültiger GeoIP-Wert → Map bleibt unverändert
+  serverLatLon = [lat, lon];
+  smoothZoomTo(lon, lat, 5);
 }
 
 function updateMap(d) {
@@ -961,8 +942,7 @@ function updateMap(d) {
   resolveAndZoom(
     d.geo_lat && Math.abs(d.geo_lat) > 0.01 ? d.geo_lat : null,
     d.geo_lon && Math.abs(d.geo_lon) > 0.01 ? d.geo_lon : null,
-    label,
-    d.server_ip
+    label
   );
 }
 
