@@ -62,6 +62,12 @@ def init_db():
             c.execute("ALTER TABLE pings ADD COLUMN router_ms INTEGER")
             c.execute("ALTER TABLE pings ADD COLUMN dns_ms INTEGER")
         except: pass
+        # Performance-Indizes
+        c.execute("CREATE INDEX IF NOT EXISTS idx_pings_ts         ON pings(ts)")
+        c.execute("CREATE INDEX IF NOT EXISTS idx_pings_session_id ON pings(session_id)")
+        c.execute("CREATE INDEX IF NOT EXISTS idx_pings_status     ON pings(status)")
+        c.execute("CREATE INDEX IF NOT EXISTS idx_events_ts        ON events(ts)")
+        c.execute("CREATE INDEX IF NOT EXISTS idx_switches_ts      ON server_switches(switched_at)")
         c.commit()
 
 def cleanup_old_data():
@@ -444,4 +450,5 @@ async def main():
         await broadcaster()
 
 if __name__=='__main__':
-    asyncio.run(main())
+    asyncio.run(main()
+)
