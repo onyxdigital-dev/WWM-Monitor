@@ -98,7 +98,10 @@ def get_total_stats():
                 MIN(CASE WHEN ping_ms>0 THEN ping_ms END) as mn,
                 MAX(CASE WHEN ping_ms>0 THEN ping_ms END) as mx,
                 SUM(CASE WHEN status='TIMEOUT' THEN 1 ELSE 0 END) as timeouts,
-                COUNT(DISTINCT session_id) as sessions FROM pings""").fetchone()
+                COUNT(DISTINCT session_id) as sessions,
+                AVG(CASE WHEN jitter IS NOT NULL THEN jitter END) as jitter,
+                SUM(CASE WHEN jitter > ? THEN 1 ELSE 0 END) as spikes
+                FROM pings""", (SPIKE_THRESH,)).fetchone()
         return dict(r) if r else None
     except:return None
 
@@ -287,14 +290,13 @@ def monitor_loop():
             _rip=s.get('router_ip') or get_router_ip()
             if _rip: s['router_ip']=_rip
             def ping_router(_ip=_rip):
-                if _ip: r_ms[0]=ping_once(_ip)  # ICMP (kein port)
+                if _ip: r_ms[0]=ping_once(_ip)
             def ping_dns():
-                d_ms[0]=ping_once('8.8.8.8')    # ICMP (kein port)
+                d_ms[0]=ping_once('8.8.8.8')
             t1=threading.Thread(target=ping_router,daemon=True)
             t2=threading.Thread(target=ping_dns,daemon=True)
             t1.start();t2.start()
 
-            # TCP-ping zum Game-Server mit echtem Port
             ms=ping_once(server_ip, port=server_port)
             t1.join(timeout=3);t2.join(timeout=3)
             s['router_ms']=r_ms[0];s['dns_ms']=d_ms[0]
