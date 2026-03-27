@@ -87,8 +87,10 @@ def get_sessions():
                 MIN(CASE WHEN ping_ms>0 THEN ping_ms END) as mn,
                 MAX(CASE WHEN ping_ms>0 THEN ping_ms END) as mx,
                 AVG(jitter) as jitter,
-                SUM(CASE WHEN status='TIMEOUT' THEN 1 ELSE 0 END) as timeouts
-                FROM pings GROUP BY session_id ORDER BY MIN(id) DESC LIMIT 20""").fetchall()
+                SUM(CASE WHEN status='TIMEOUT' THEN 1 ELSE 0 END) as timeouts,
+                SUM(CASE WHEN jitter > ? THEN 1 ELSE 0 END) as spikes
+                FROM pings GROUP BY session_id ORDER BY MIN(id) DESC LIMIT 20""",
+                (SPIKE_THRESH,)).fetchall()
         return [dict(r) for r in rows]
     except:return []
 
