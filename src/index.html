@@ -647,14 +647,26 @@ function updateLive(d) {
     window.electronAPI.sendPingData({ ms: ms });
 }
 
+// ── Canvas-Resize-Helper ───────────────────────────────────────────────────────
+// Setzt canvas.width/height NUR wenn sie sich wirklich geändert haben.
+// Rückgabe: true = Resize erfolgt (Context wurde zurückgesetzt), false = unverandert.
+function syncCanvasSize(canvas, fallbackW, fallbackH) {
+  const wrap = canvas.parentElement;
+  const W = wrap.offsetWidth  || fallbackW;
+  const H = wrap.offsetHeight || fallbackH;
+  if (canvas.width === W && canvas.height === H) return false;
+  canvas.width  = W;
+  canvas.height = H;
+  return true;
+}
+
 // ── Ping Graph ─────────────────────────────────────────────────────────────
 function drawGraph() {
-  const wrap=document.getElementById('graph-canvas').parentElement;
-  const canvas=document.getElementById('graph-canvas');
-  canvas.width=wrap.offsetWidth||800; canvas.height=wrap.offsetHeight||110;
+  const canvas = document.getElementById('graph-canvas');
+  syncCanvasSize(canvas, 800, 110);
   const ctx=canvas.getContext('2d'),W=canvas.width,H=canvas.height,hist=graphHistory;
-  if (!hist.length) return;
   ctx.clearRect(0,0,W,H);
+  if (!hist.length) return;
   const valid=hist.filter(v=>v!==null);
   if (!valid.length) return;
   const maxV=Math.max(...valid,CRIT)+20,n=hist.length,step=W/Math.max(n,1),pad=8;
@@ -687,12 +699,11 @@ function drawGraph() {
 
 // ── Jitter Graph ───────────────────────────────────────────────────────────
 function drawJitter() {
-  const wrap=document.getElementById('jitter-canvas').parentElement;
-  const canvas=document.getElementById('jitter-canvas');
-  canvas.width=wrap.offsetWidth||800; canvas.height=wrap.offsetHeight||70;
+  const canvas = document.getElementById('jitter-canvas');
+  syncCanvasSize(canvas, 800, 70);
   const ctx=canvas.getContext('2d'),W=canvas.width,H=canvas.height,hist=jitterHistory;
-  if (!hist.length) return;
   ctx.clearRect(0,0,W,H);
+  if (!hist.length) return;
   const valid=hist.filter(v=>v!=null&&v>0);
   if (!valid.length) return;
   const maxV=Math.max(...valid,30)+5,n=hist.length,step=W/Math.max(n,1),pad=4;
@@ -874,23 +885,14 @@ function loadWorldMap(){
     .then(r=>r.json()).then(topo=>{worldPolygons=decodeTopo(topo);}).catch(()=>{});
 }
 
-/**
- * Resolves lat/lon for a server IP using a 3-step priority chain:
- *  1. geo_lat/geo_lon aus dem Backend (ip-api.com) — schnellster Weg
- *  2. Nominatim-Suche mit "City, Country"-Label
- *  3. Nominatim IP-Fallback: direkte Suche nach der rohen Server-IP
- */
 function resolveAndZoom(lat, lon, label, ip) {
-  // Stufe 1: Backend hat bereits Koordinaten geliefert
   if (lat && lon) {
     serverLatLon = [lat, lon];
     smoothZoomTo(lon, lat, 5);
     return;
   }
-  // Stufe 2: Nominatim mit Geo-Label (City, Country)
   const query = label && label !== ip ? label : null;
   const tryNominatimIp = () => {
-    // Stufe 3: Nominatim IP-Fallback — direkte IP-Suche
     fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(ip)}&format=json&limit=1`)
       .then(r => r.json())
       .then(res => {
@@ -909,7 +911,7 @@ function resolveAndZoom(lat, lon, label, ip) {
           serverLatLon = [newLat, newLon];
           smoothZoomTo(newLon, newLat, 5);
         } else {
-          tryNominatimIp(); // Label hat nichts ergeben → IP-Fallback
+          tryNominatimIp();
         }
       }).catch(tryNominatimIp);
   } else {
@@ -924,10 +926,8 @@ function updateMap(d) {
   document.getElementById('geo-ip').textContent      = d.server_ip   || '—';
   document.getElementById('geo-ping').textContent    = (d.last_ms !== null && d.last_ms !== undefined) ? d.last_ms + ' ms' : '— ms';
 
-  // Neues IP oder noch gar kein IP → nix tun
   if (!d.server_ip || d.server_ip === lastMappedIp) return;
 
-  // Alten Server in pastServers sichern
   if (serverLatLon && lastMappedIp) {
     if (!pastServers.some(p => p.ip === lastMappedIp)) {
       pastServers.push({
@@ -943,7 +943,6 @@ function updateMap(d) {
   const label = [d.geo_city, d.geo_country].filter(Boolean).join(', ') || d.server_ip;
   document.getElementById('map-label').textContent = label;
 
-  // Koordinaten-Auflösung: Backend-Coords → Nominatim-Label → Nominatim-IP
   resolveAndZoom(
     d.geo_lat && Math.abs(d.geo_lat) > 0.01 ? d.geo_lat : null,
     d.geo_lon && Math.abs(d.geo_lon) > 0.01 ? d.geo_lon : null,
