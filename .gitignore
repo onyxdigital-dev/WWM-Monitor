@@ -31,3 +31,7 @@ desktop.ini
 .idea/
 *.suo
 *.user
+
+# Claude
+.claude/
+CLAUDE.md
