@@ -157,12 +157,6 @@ body { width:100%; height:100%; background:transparent !important; overflow:hidd
 .map-badge-val { font-size:12px; color:white; margin-top:3px; }
 
 .spike-info { font-size:11px; color:rgba(255,255,255,.4); padding:0 4px; display:none; flex-shrink:0; }
-.event-btn {
-  padding:7px 18px; background:rgba(168,85,247,.15); border:1px solid rgba(168,85,247,.35);
-  border-radius:9px; color:#a855f7; font-size:11px; font-weight:700;
-  cursor:pointer; font-family:inherit; transition:all .2s; letter-spacing:.05em;
-}
-.event-btn:hover { background:rgba(168,85,247,.28); border-color:rgba(168,85,247,.6); }
 .export-btn {
   padding:7px 18px; background:rgba(34,197,94,.12); border:1px solid rgba(34,197,94,.3);
   border-radius:9px; color:#22c55e; font-size:11px; font-weight:700;
@@ -194,22 +188,6 @@ tbody td:first-child { color:var(--text); font-family:'Consolas',monospace; font
 .orb2 { width:300px; height:300px; background:rgba(255,255,255,.04); bottom:0; right:80px; }
 @keyframes fadeIn { from{opacity:0;transform:translateY(5px)} to{opacity:1;transform:none} }
 .fade-in { animation:fadeIn .3s ease forwards; }
-#event-modal {
-  display:none; position:fixed; inset:0; z-index:9999;
-  background:rgba(0,0,0,0.6); backdrop-filter:blur(8px);
-  align-items:center; justify-content:center;
-}
-#event-modal.show { display:flex; }
-#event-modal-box {
-  background:#111; border:1px solid rgba(255,255,255,0.15);
-  border-radius:14px; padding:24px; width:300px; display:flex;
-  flex-direction:column; gap:12px;
-}
-#event-modal-input {
-  background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.15);
-  border-radius:8px; padding:9px 12px; color:white; font-size:13px;
-  font-family:inherit; outline:none; width:100%;
-}
 .update-btn {
   padding:7px 18px; background:rgba(34,197,94,.12); border:1px solid rgba(34,197,94,.3);
   border-radius:9px; color:#22c55e; font-size:11px; font-weight:700;
@@ -217,6 +195,13 @@ tbody td:first-child { color:var(--text); font-family:'Consolas',monospace; font
 }
 .update-btn:hover { background:rgba(34,197,94,.25); border-color:rgba(34,197,94,.55); }
 .update-btn:disabled { opacity:.4; cursor:not-allowed; }
+.interval-btn {
+  padding:5px 12px; background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.12);
+  border-radius:8px; color:var(--muted); font-size:11px; font-weight:700;
+  cursor:pointer; font-family:inherit; transition:all .2s; letter-spacing:.04em;
+}
+.interval-btn:hover { background:rgba(255,255,255,.12); color:var(--muted2); }
+.interval-btn.active { background:rgba(255,255,255,.15); border-color:rgba(255,255,255,.35); color:white; }
 </style>
 </head>
 <body>
@@ -341,18 +326,22 @@ tbody td:first-child { color:var(--text); font-family:'Consolas',monospace; font
             <div class="stat-tile"><div class="stat-val" id="d-jitter"   style="color:#f59e0b">—</div><div class="stat-lbl">AVG JITTER</div></div>
             <div class="stat-tile"><div class="stat-val" id="d-spikes"   style="color:#a855f7">—</div><div class="stat-lbl">SPIKES</div></div>
             <div class="stat-tile"><div class="stat-val" id="d-sessions" style="color:rgba(255,255,255,.65)">—</div><div class="stat-lbl">SESSIONS</div></div>
+            <div class="stat-tile"><div class="stat-val" id="d-quality"  style="color:#22c55e">—</div><div class="stat-lbl">QUALITY</div></div>
           </div>
+        </div>
+        <div class="card fade-in" style="padding:14px 16px;">
+          <div class="sec-hdr" style="margin-bottom:8px;"><div class="sec-bar"></div><div class="sec-title">PING TREND — LAST 24H</div></div>
+          <canvas id="hourly-canvas" style="width:100%;height:72px;display:block;"></canvas>
         </div>
         <div style="display:flex;gap:8px;padding:0 2px;" class="fade-in">
           <button class="export-btn no-drag" onclick="exportCSV()">⬇ EXPORT CSV</button>
-          <button class="event-btn no-drag" onclick="markEvent()">⚑ MARK EVENT</button>
           <button class="overlay-btn no-drag" id="overlay-toggle-btn" onclick="toggleOverlay()">⧉ OVERLAY</button>
         </div>
         <div class="card table-card fade-in">
           <div class="sec-hdr"><div class="sec-bar"></div><div class="sec-title">SESSION HISTORY</div></div>
           <div class="table-scroll">
             <table>
-              <thead><tr><th>Session</th><th>Server</th><th>Pings</th><th>Avg ms</th><th>Min</th><th>Max</th><th>Jitter</th><th>Loss</th><th>Spikes</th></tr></thead>
+              <thead><tr><th>Session</th><th>Server</th><th>Pings</th><th>Avg ms</th><th>Min</th><th>Max</th><th>Jitter</th><th>Loss</th><th>Spikes</th><th>Quality</th></tr></thead>
               <tbody id="sess-tbody"></tbody>
             </table>
           </div>
@@ -363,15 +352,6 @@ tbody td:first-child { color:var(--text); font-family:'Consolas',monospace; font
             <table>
               <thead><tr><th>Time</th><th>From IP</th><th>To IP</th><th>Duration on old server</th><th>Session</th></tr></thead>
               <tbody id="switch-tbody"><tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px;">No server switches recorded yet.</td></tr></tbody>
-            </table>
-          </div>
-        </div>
-        <div class="card table-card fade-in" style="min-height:150px;">
-          <div class="sec-hdr"><div class="sec-bar"></div><div class="sec-title">EVENT MARKERS</div></div>
-          <div class="table-scroll">
-            <table>
-              <thead><tr><th>Time</th><th>Label</th><th>Ping at event</th></tr></thead>
-              <tbody id="events-tbody"><tr><td colspan="3" style="text-align:center;color:var(--muted);padding:20px;">No events marked yet.</td></tr></tbody>
             </table>
           </div>
         </div>
@@ -395,6 +375,39 @@ tbody td:first-child { color:var(--text); font-family:'Consolas',monospace; font
           </div>
         </div>
         <div class="card" style="padding:22px 24px;">
+          <div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.1em;margin-bottom:16px;">MONITORING</div>
+          <div style="display:flex;flex-direction:column;gap:14px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <div><div style="font-size:13px;color:var(--text);">Reset Session</div><div style="font-size:11px;color:var(--muted);margin-top:2px;">Clear current stats and start a new session</div></div>
+              <button class="export-btn no-drag" onclick="resetSession()">↺ RESET</button>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <div><div style="font-size:13px;color:var(--text);">Ping Interval</div><div style="font-size:11px;color:var(--muted);margin-top:2px;">How often to ping the server</div></div>
+              <div id="s-interval" class="no-drag" style="display:flex;gap:4px;">
+                <button class="interval-btn no-drag"        data-val="1" onclick="setInterval_(1)">1s</button>
+                <button class="interval-btn no-drag active" data-val="2" onclick="setInterval_(2)">2s</button>
+                <button class="interval-btn no-drag"        data-val="5" onclick="setInterval_(5)">5s</button>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <div><div style="font-size:13px;color:var(--text);">Warn Threshold</div><div style="font-size:11px;color:var(--muted);margin-top:2px;">Yellow ping above this (ms)</div></div>
+              <div id="s-warn" class="no-drag" style="display:flex;gap:4px;">
+                <button class="interval-btn no-drag" data-warn="60"  onclick="setWarn_(60)">60ms</button>
+                <button class="interval-btn no-drag active" data-warn="80"  onclick="setWarn_(80)">80ms</button>
+                <button class="interval-btn no-drag" data-warn="100" onclick="setWarn_(100)">100ms</button>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <div><div style="font-size:13px;color:var(--text);">Critical Threshold</div><div style="font-size:11px;color:var(--muted);margin-top:2px;">Red ping above this (ms)</div></div>
+              <div id="s-crit" class="no-drag" style="display:flex;gap:4px;">
+                <button class="interval-btn no-drag" data-crit="100" onclick="setCrit_(100)">100ms</button>
+                <button class="interval-btn no-drag active" data-crit="150" onclick="setCrit_(150)">150ms</button>
+                <button class="interval-btn no-drag" data-crit="200" onclick="setCrit_(200)">200ms</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card" style="padding:22px 24px;">
           <div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.1em;margin-bottom:16px;">ABOUT</div>
           <div style="display:flex;flex-direction:column;gap:10px;">
             <div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:12px;color:var(--muted);">Version</span><span style="font-size:12px;color:var(--text);" id="about-version"></span></div>
@@ -411,20 +424,10 @@ tbody td:first-child { color:var(--text); font-family:'Consolas',monospace; font
   </div>
 </div>
 
-<div id="event-modal" class="no-drag">
-  <div id="event-modal-box">
-    <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.5);letter-spacing:.08em;">EVENT LABEL</div>
-    <input id="event-modal-input" class="no-drag" type="text" value="Round Start" maxlength="40"/>
-    <div style="display:flex;gap:8px;">
-      <button class="event-btn no-drag" style="flex:1;" onclick="confirmEvent()">⚑ MARK</button>
-      <button class="export-btn no-drag" style="flex:1;" onclick="closeEventModal()">CANCEL</button>
-    </div>
-  </div>
-</div>
 
 <script>
 let ws;
-const WARN=80, CRIT=150;
+let WARN=80, CRIT=150;
 
 function connect() {
   ws = new WebSocket('ws://localhost:7373');
@@ -432,11 +435,12 @@ function connect() {
   ws.onerror = () => ws.close();
   ws.onmessage = ({data}) => {
     const msg = JSON.parse(data);
-    if (msg.type==='state')     updateLive(msg.data);
-    if (msg.type==='sessions')  updateDash(msg.data, msg.stats);
-    if (msg.type==='switches')  updateSwitches(msg.data);
-    if (msg.type==='events')    updateEvents(msg.data);
-    if (msg.type==='csv_data')  downloadCSV(msg.csv);
+    if (msg.type==='state')        updateLive(msg.data);
+    if (msg.type==='sessions')     updateDash(msg.data, msg.stats);
+    if (msg.type==='switches')     updateSwitches(msg.data);
+    if (msg.type==='csv_data')     downloadCSV(msg.csv);
+    if (msg.type==='session_reset') onSessionReset();
+    if (msg.type==='hourly')        drawHourly(msg.data);
   };
 }
 connect();
@@ -449,7 +453,7 @@ function switchTab(tab) {
   if (tab==='dash' && ws && ws.readyState===1) {
     ws.send(JSON.stringify({type:'get_sessions'}));
     ws.send(JSON.stringify({type:'get_switches'}));
-    ws.send(JSON.stringify({type:'get_events'}));
+    ws.send(JSON.stringify({type:'get_hourly'}));
   }
 }
 
@@ -520,6 +524,22 @@ function toggleOverlay() {
   }
 }
 
+// ── Reset Session ──────────────────────────────────────────────────────────
+function resetSession() {
+  if (ws && ws.readyState === 1) ws.send(JSON.stringify({type:'reset_session'}));
+}
+function onSessionReset() {
+  graphHistory=[]; jitterHistory=[]; graphLatestTs=null;
+  lastGraphLen=-1; lastJitterLen=-1; lastBadgeKey='';
+  drawGraph(); drawJitter();
+  const stxt=document.getElementById('status-text');
+  if(stxt){
+    const prev=stxt.textContent, prevCol=stxt.style.color;
+    stxt.textContent='Session reset ✓'; stxt.style.color='#22c55e';
+    setTimeout(()=>{stxt.textContent=prev;stxt.style.color=prevCol;},1500);
+  }
+}
+
 // ── connected_since Timer (#4) ─────────────────────────────────────────────
 // Stored once from WS state, ticked independently every second
 let connectedSinceTs = null;
@@ -538,6 +558,7 @@ setInterval(() => {
 let graphHistory=[], jitterHistory=[];
 let lastGraphLen=-1, lastJitterLen=-1;
 let lastBadgeKey='';
+let graphLatestTs=null, pingIntervalMs=2000;
 
 function updateLive(d) {
   const ms=d.last_ms, count=d.count, lost=d.lost, recv=count-lost;
@@ -662,6 +683,7 @@ function updateLive(d) {
 
   graphHistory  = newGraph;
   jitterHistory = newJitter;
+  if (graphChanged) graphLatestTs = Date.now();
 
   if (graphChanged)  { lastGraphLen  = graphHistory.length;  drawGraph(); }
   if (jitterChanged) { lastJitterLen = jitterHistory.length; drawJitter(); }
@@ -669,7 +691,7 @@ function updateLive(d) {
   updateMap(d);
 
   if (window.electronAPI && window.electronAPI.sendPingData)
-    window.electronAPI.sendPingData({ ms: ms });
+    window.electronAPI.sendPingData({ ms, status: d.status, jitter, loss });
 }
 
 // ── Canvas-Resize-Helper ───────────────────────────────────────────────────────
@@ -718,6 +740,15 @@ function drawGraph() {
     ctx.beginPath();ctx.arc(x,y,3,0,Math.PI*2);
     ctx.fillStyle=v>=CRIT?'#ef4444':v>=WARN?'#f59e0b':'rgba(255,255,255,.8)';ctx.fill();
   });
+  // X-axis timestamps
+  if (graphLatestTs && hist.length > 1) {
+    const fmtT=ts=>new Date(ts).toLocaleTimeString('de-DE');
+    const leftTs=graphLatestTs-(hist.length-1)*pingIntervalMs;
+    ctx.font='9px Segoe UI';ctx.fillStyle='rgba(255,255,255,0.28)';ctx.textBaseline='bottom';
+    ctx.textAlign='left';  ctx.fillText(fmtT(leftTs),      3, H-1);
+    ctx.textAlign='right'; ctx.fillText(fmtT(graphLatestTs),W-3,H-1);
+    ctx.textBaseline='alphabetic';ctx.textAlign='left';
+  }
 }
 
 // ── Jitter Graph ───────────────────────────────────────────────────────────
@@ -904,8 +935,8 @@ function zoomReset(){
 }
 
 function loadWorldMap(){
-  fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json')
-    .then(r=>r.json()).then(topo=>{worldPolygons=decodeTopo(topo);}).catch(()=>{});
+  fetch('countries-110m.json')
+    .then(r=>r.json()).then(topo=>{worldPolygons=decodeTopo(topo);drawMap();}).catch(e=>console.error('[map]',e));
 }
 
 // ── resolveAndZoom: nur Backend-GeoIP (#6, kein Nominatim-Fallback mehr) ──
@@ -974,18 +1005,59 @@ function updateDash(rows,stats){
     document.getElementById('d-jitter').textContent=stats.jitter!=null?Math.round(stats.jitter)+' ms':'—';
     document.getElementById('d-sessions').textContent=stats.sessions||'—';
     document.getElementById('d-spikes').textContent=stats.spikes!=null?stats.spikes:'—';
+    const totalLoss=stats.total?Math.round((stats.timeouts||0)*100/stats.total):0;
+    const qs=qualityScore(stats.avg,totalLoss,stats.jitter?Math.round(stats.jitter):0,stats.spikes||0,stats.total);
+    const qEl=document.getElementById('d-quality');
+    if(qs!=null){ qEl.textContent=qs; qEl.style.color=qs>=80?'#22c55e':qs>=60?'#f59e0b':'#ef4444'; }
+    else { qEl.textContent='—'; qEl.style.color='#22c55e'; }
   }
   const tbody=document.getElementById('sess-tbody');
   tbody.innerHTML='';
   (rows||[]).forEach(r=>{
     const loss=r.total?Math.round(r.timeouts*100/r.total):0;
+    const score=qualityScore(r.avg,loss,r.jitter?Math.round(r.jitter):0,r.spikes||0,r.total);
     const tr=document.createElement('tr');
-    [r.session_id,r.server_ip||'—',r.total,
+    if(score!=null&&score<60) tr.style.background='rgba(239,68,68,0.07)';
+    else if(score!=null&&score<80) tr.style.background='rgba(245,158,11,0.05)';
+    const vals=[fmtSessionId(r.session_id),null,r.total,
      r.avg?Math.round(r.avg):'—',r.mn||'—',r.mx||'—',
-     r.jitter?Math.round(r.jitter):'—',loss+'%',r.spikes!=null?r.spikes:'—'
-    ].forEach(val=>{const td=document.createElement('td');td.textContent=val;tr.appendChild(td);});
+     r.jitter?Math.round(r.jitter):'—',loss+'%',r.spikes!=null?r.spikes:'—',null
+    ];
+    vals.forEach((val,i)=>{
+      const td=document.createElement('td');
+      if(i===1){
+        const ips=(r.server_ip||'—').split(',').map(s=>s.trim()).filter(Boolean);
+        td.textContent=ips.join('\n');
+        td.style.whiteSpace='pre-line';
+      } else if(i===9){
+        if(score!=null){
+          td.textContent=score;
+          td.style.fontWeight='700';
+          td.style.color=score>=80?'#22c55e':score>=60?'#f59e0b':'#ef4444';
+        } else { td.textContent='—'; }
+      } else {
+        td.textContent=val;
+      }
+      tr.appendChild(td);
+    });
     tbody.appendChild(tr);
   });
+}
+
+function fmtSessionId(sid){
+  if(!sid)return'—';
+  const m=sid.match(/^(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})$/);
+  if(!m)return sid;
+  return`${m[3]}.${m[2]}.${m[1]} ${m[4]}:${m[5]}`;
+}
+
+function qualityScore(avg, lossPct, jitter, spikes, total) {
+  if (!total || avg == null) return null;
+  const pingPenalty   = Math.min(Math.max(0, (avg - 80) / 220) * 40, 40);
+  const lossPenalty   = Math.min(lossPct * 3, 30);
+  const jitterPenalty = Math.min(Math.max(0, (jitter - 10) / 40) * 20, 20);
+  const spikePenalty  = Math.min((spikes / total) * 200, 10);
+  return Math.max(0, Math.round(100 - pingPenalty - lossPenalty - jitterPenalty - spikePenalty));
 }
 
 function fmtDuration(secs){
@@ -998,6 +1070,44 @@ function fmtDuration(secs){
 function fmtTs(iso){
   if(!iso)return'—';
   try{const d=new Date(iso);return d.toLocaleDateString('de-DE')+' '+d.toLocaleTimeString('de-DE');}catch(e){return iso;}
+}
+
+function drawHourly(rows){
+  const canvas=document.getElementById('hourly-canvas');
+  if(!canvas)return;
+  const W=canvas.offsetWidth||800,H=72;
+  if(canvas.width!==W||canvas.height!==H){canvas.width=W;canvas.height=H;}
+  const ctx=canvas.getContext('2d');
+  ctx.clearRect(0,0,W,H);
+  // Build 24-slot array anchored to current hour
+  const now=new Date();
+  const slots=Array.from({length:24},(_,i)=>{
+    const d=new Date(now-(23-i)*3600000);
+    const key=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:00`;
+    return (rows||[]).find(r=>r.hour===key)||null;
+  });
+  const valid=slots.filter(r=>r&&r.avg_ms).map(r=>r.avg_ms);
+  const maxV=valid.length?Math.max(...valid,CRIT)+20:CRIT+20;
+  const barW=W/24,pad=4,lblH=12;
+  slots.forEach((r,i)=>{
+    const x=i*barW;
+    if(!r||!r.avg_ms){
+      ctx.fillStyle='rgba(255,255,255,0.04)';
+      ctx.fillRect(x+1,pad,barW-2,H-pad-lblH);
+      return;
+    }
+    const h=Math.max(3,Math.round((r.avg_ms/maxV)*(H-pad-lblH)));
+    ctx.fillStyle=r.avg_ms>=CRIT?'rgba(239,68,68,.75)':r.avg_ms>=WARN?'rgba(245,158,11,.75)':'rgba(34,197,94,.75)';
+    ctx.fillRect(x+1,H-lblH-h,barW-2,h);
+  });
+  // Hour labels every 6 slots
+  ctx.fillStyle='rgba(255,255,255,0.28)';ctx.font='8px Segoe UI';
+  ctx.textAlign='center';ctx.textBaseline='bottom';
+  [0,6,12,18,23].forEach(i=>{
+    const d=new Date(now-(23-i)*3600000);
+    ctx.fillText(String(d.getHours()).padStart(2,'0')+'h',(i+0.5)*barW,H);
+  });
+  ctx.textBaseline='alphabetic';ctx.textAlign='left';
 }
 
 function updateSwitches(rows){
@@ -1024,48 +1134,6 @@ function updateSwitches(rows){
   });
 }
 
-// ── Events ─────────────────────────────────────────────────────────────────
-function markEvent() {
-  document.getElementById('event-modal').classList.add('show');
-  setTimeout(()=>document.getElementById('event-modal-input').focus(),50);
-}
-function closeEventModal() {
-  document.getElementById('event-modal').classList.remove('show');
-}
-function confirmEvent() {
-  const label = document.getElementById('event-modal-input').value.trim() || 'Round Start';
-  if (!ws || ws.readyState !== 1) { closeEventModal(); return; }
-  ws.send(JSON.stringify({type:'add_event', label}));
-  closeEventModal();
-}
-document.addEventListener('keydown', e => {
-  if (e.key === 'Enter' && document.getElementById('event-modal').classList.contains('show'))
-    confirmEvent();
-  if (e.key === 'Escape' && document.getElementById('event-modal').classList.contains('show'))
-    closeEventModal();
-});
-
-function updateEvents(rows){
-  const tbody=document.getElementById('events-tbody');
-  if(!tbody)return;
-  tbody.innerHTML='';
-  if(!rows||!rows.length){
-    const tr=document.createElement('tr'),td=document.createElement('td');
-    td.colSpan=3;td.textContent='No events marked yet.';
-    td.style.cssText='text-align:center;color:var(--muted);padding:20px;';
-    tr.appendChild(td);tbody.appendChild(tr);return;
-  }
-  rows.forEach(r=>{
-    const tr=document.createElement('tr');
-    [fmtTs(r.ts),r.label,r.ping_ms!=null?r.ping_ms+' ms':'—'].forEach((val,i)=>{
-      const td=document.createElement('td');td.textContent=val;
-      if(i===1)td.style.color='#a855f7';
-      if(i===2)td.style.color='#22c55e';
-      tr.appendChild(td);
-    });
-    tbody.appendChild(tr);
-  });
-}
 
 // ── CSV Export ─────────────────────────────────────────────────────────────
 function exportCSV(){
@@ -1082,11 +1150,14 @@ function downloadCSV(csvStr){
 }
 
 // ── Settings ───────────────────────────────────────────────────────────────
-let cfg={startup:false,tray:true,spikeMs:150,lossPct:5};
+let cfg={startup:false,tray:true,spikeMs:150,lossPct:5,pingInterval:2,warnMs:80,critMs:150};
 
 function applySettingsToUI(){
   document.getElementById('s-startup').checked=cfg.startup||false;
   document.getElementById('s-tray').checked=cfg.tray!==false;
+  setInterval_(cfg.pingInterval||2, true);
+  setWarn_(cfg.warnMs||80, true);
+  setCrit_(cfg.critMs||150, true);
 }
 
 function saveSetting(k,v){
@@ -1094,12 +1165,33 @@ function saveSetting(k,v){
   if(window.electronAPI&&window.electronAPI.saveSettings)window.electronAPI.saveSettings(cfg);
   if(k==='startup'&&window.electronAPI)window.electronAPI.send('set-startup',v);
   if(k==='tray'&&window.electronAPI)window.electronAPI.send('set-tray',v);
+  if(k==='pingInterval'){
+    pingIntervalMs=v*1000;
+    if(ws&&ws.readyState===1) ws.send(JSON.stringify({type:'settings',pingInterval:v}));
+  }
+  if(k==='warnMs'||k==='critMs'){
+    WARN=cfg.warnMs||80; CRIT=cfg.critMs||150;
+    if(ws&&ws.readyState===1) ws.send(JSON.stringify({type:'settings',warnMs:cfg.warnMs,critMs:cfg.critMs}));
+  }
+}
+function setWarn_(v, skipSave){
+  document.querySelectorAll('[data-warn]').forEach(b=>b.classList.toggle('active',+b.dataset.warn===v));
+  if(!skipSave) saveSetting('warnMs',v);
+}
+function setCrit_(v, skipSave){
+  document.querySelectorAll('[data-crit]').forEach(b=>b.classList.toggle('active',+b.dataset.crit===v));
+  if(!skipSave) saveSetting('critMs',v);
+}
+function setInterval_(v, skipSave){
+  document.querySelectorAll('.interval-btn[data-val]').forEach(b=>b.classList.toggle('active',+b.dataset.val===v));
+  if(!skipSave) saveSetting('pingInterval',v);
 }
 
 function loadSettings(){
   if(window.electronAPI&&window.electronAPI.getSettings){
     window.electronAPI.getSettings().then(saved=>{
       cfg=Object.assign(cfg,saved);
+      WARN=cfg.warnMs||80; CRIT=cfg.critMs||150;
       applySettingsToUI();
       window.electronAPI.send('set-tray',cfg.tray!==false);
     });

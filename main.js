@@ -1,4 +1,5 @@
 const { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage } = require('electron')
+app.commandLine.appendSwitch('disable-features', 'AutofillServerCommunication,Autofill')
 const path = require('path')
 const { spawn, execSync } = require('child_process')
 const fs = require('fs')
@@ -84,24 +85,28 @@ function sendUpdateStatus(data) {
 }
 
 // ─── Settings ─────────────────────────────────────────────────────────────────
-const SETTINGS_DEFAULTS = { startup: false, tray: true, notify: true, spikeMs: 150, lossPct: 5 }
+const SETTINGS_DEFAULTS = { startup: false, tray: true, notify: true, spikeMs: 150, lossPct: 5, pingInterval: 2, warnMs: 80, critMs: 150 }
+let _settingsCache = null
 
 function getSettingsPath() {
   return path.join(app.getPath('userData'), 'settings.json')
 }
 
 function loadSettings() {
+  if (_settingsCache) return Object.assign({}, _settingsCache)
   try {
     const raw = fs.readFileSync(getSettingsPath(), 'utf-8')
-    return Object.assign({}, SETTINGS_DEFAULTS, JSON.parse(raw))
+    _settingsCache = Object.assign({}, SETTINGS_DEFAULTS, JSON.parse(raw))
   } catch(e) {
-    return Object.assign({}, SETTINGS_DEFAULTS)
+    _settingsCache = Object.assign({}, SETTINGS_DEFAULTS)
   }
+  return Object.assign({}, _settingsCache)
 }
 
 function saveSettings(cfg) {
   try {
     fs.writeFileSync(getSettingsPath(), JSON.stringify(cfg, null, 2), 'utf-8')
+    _settingsCache = Object.assign({}, cfg)
   } catch(e) {
     console.error('[settings] save error:', e.message)
   }
@@ -123,7 +128,7 @@ function startBackend() {
   backend.on('close',  code => console.log('[backend] exited', code))
 }
 
-// ─── Kill backend ─────────────────────────────────────────────────────────────
+// ─── Shutdown ─────────────────────────────────────────────────────────────────
 function killBackend() {
   if (!backend) return
   try {
@@ -145,6 +150,14 @@ function killBackendByName() {
   }
 }
 
+function shutdown() {
+  isQuitting = true
+  killBackend()
+  killBackendByName()
+  closeOverlay()
+  if (tray) { try { tray.destroy(); tray = null } catch(e) {} }
+}
+
 // ─── Overlay ──────────────────────────────────────────────────────────────────
 function createOverlay() {
   if (overlay && !overlay.isDestroyed()) {
@@ -152,8 +165,11 @@ function createOverlay() {
     overlay.focus()
     return
   }
+  const cfg = loadSettings()
   overlay = new BrowserWindow({
-    width: 160, height: 50,
+    width: 160, height: 68,
+    x: cfg.overlayX ?? undefined,
+    y: cfg.overlayY ?? undefined,
     frame: false,
     transparent: true,
     backgroundColor: '#00000000',
@@ -163,13 +179,19 @@ function createOverlay() {
     movable: true,
     show: false,
     webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false,
+      preload: path.join(__dirname, 'overlay-preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
     }
   })
   overlay.loadFile(path.join(__dirname, 'src', 'overlay.html'))
   overlay.once('ready-to-show', () => overlay.show())
   overlay.setAlwaysOnTop(true, 'screen-saver')
+  overlay.on('moved', () => {
+    const [x, y] = overlay.getPosition()
+    const current = loadSettings()
+    saveSettings({ ...current, overlayX: x, overlayY: y })
+  })
   overlay.on('closed', () => { overlay = null })
 }
 
@@ -202,13 +224,50 @@ function buildRoundedShape(w, h, r) {
   return rects
 }
 
+let _shapeDebounce = null
 function applyRoundedShape() {
   if (!win) return
   if (win.isMaximized()) return
-  try {
-    const [w, h] = win.getSize()
-    win.setShape(buildRoundedShape(w, h, 14))
-  } catch(e) {}
+  clearTimeout(_shapeDebounce)
+  _shapeDebounce = setTimeout(() => {
+    try {
+      const [w, h] = win.getSize()
+      win.setShape(buildRoundedShape(w, h, 14))
+    } catch(e) {}
+  }, 16)
+}
+
+// ─── Tray icon color by ping status ──────────────────────────────────────────
+const _STATUS_COLORS = {
+  OK:      [34, 197, 94],
+  WARN:    [245, 158, 11],
+  CRIT:    [239, 68, 68],
+  TIMEOUT: [239, 68, 68],
+  waiting: [120, 120, 120],
+}
+
+function createStatusIcon(status) {
+  const size = 16
+  const [r, g, b] = _STATUS_COLORS[status] || _STATUS_COLORS.waiting
+  const buf = Buffer.alloc(size * size * 4)
+  const cx = 7.5, cy = 7.5, radius = 5.5
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const dx = x - cx, dy = y - cy
+      if (dx*dx + dy*dy <= radius*radius) {
+        const i = (y * size + x) * 4
+        buf[i] = r; buf[i+1] = g; buf[i+2] = b; buf[i+3] = 255
+      }
+    }
+  }
+  return nativeImage.createFromBuffer(buf, { width: size, height: size })
+}
+
+let _lastTrayStatus = null
+function updateTrayIcon(status) {
+  if (!tray || status === _lastTrayStatus) return
+  _lastTrayStatus = status
+  try { tray.setImage(createStatusIcon(status)) } catch(e) {}
 }
 
 // ─── Tray ─────────────────────────────────────────────────────────────────────
@@ -248,14 +307,7 @@ function buildTrayMenu() {
     { label: 'Overlay anzeigen',  click: () => createOverlay() },
     { label: 'Overlay schließen', click: () => closeOverlay() },
     { type: 'separator' },
-    { label: 'Beenden', click: () => {
-        isQuitting = true
-        killBackend()
-        closeOverlay()
-        if (tray) { try { tray.destroy(); tray = null } catch(e) {} }
-        app.exit(0)
-      }
-    }
+    { label: 'Beenden', click: () => { shutdown(); app.exit(0) } }
   ])
 }
 
@@ -290,8 +342,9 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      webSecurity: false,
+      webSecurity: true,
       devTools: false,
+      partition: 'nopersist',
     }
   })
 
@@ -320,7 +373,7 @@ function createWindow() {
 // ─── App lifecycle ────────────────────────────────────────────────────────────
 app.whenReady().then(() => {
   startBackend()
-  setTimeout(createWindow, 1800)
+  createWindow()
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
@@ -346,11 +399,7 @@ ipcMain.on('close', () => {
   if (useTray && tray) {
     if (win) win.hide()
   } else {
-    isQuitting = true
-    killBackend()
-    killBackendByName()
-    closeOverlay()
-    if (tray) { try { tray.destroy(); tray = null } catch(e) {} }
+    shutdown()
     app.exit(0)
   }
 })
@@ -367,6 +416,11 @@ ipcMain.on('overlay-open',  () => createOverlay())
 ipcMain.on('overlay-close', () => closeOverlay())
 
 ipcMain.on('ping-data', (_, data) => {
+  updateTrayIcon(data.status || 'waiting')
+  if (win && !win.isDestroyed()) {
+    const label = data.ms != null ? `${data.ms} ms` : 'timeout'
+    win.setTitle(`WWM Monitor — ${label}`)
+  }
   if (overlay && !overlay.isDestroyed()) {
     overlay.webContents.send('ping-update', data)
   }
@@ -393,12 +447,8 @@ ipcMain.handle('get-app-version', () => {
 // ─── Updater IPC ──────────────────────────────────────────────────────────────
 ipcMain.on('update-install-now', () => {
   if (!autoUpdater) return
-  isQuitting = true
   writeLog('update-install-now: killing backend before install...')
-  killBackend()
-  killBackendByName()
-  closeOverlay()
-  if (tray) { try { tray.destroy(); tray = null } catch(e) {} }
+  shutdown()
   setTimeout(() => {
     autoUpdater.quitAndInstall(false, true)
   }, 800)

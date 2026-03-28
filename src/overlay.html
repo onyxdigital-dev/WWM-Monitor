@@ -31,10 +31,18 @@ html, body {
   box-shadow:0 0 10px rgba(34,197,94,0.7);
   transition:background .3s, box-shadow .3s;
 }
+#info-col {
+  display:flex; flex-direction:column; gap:3px;
+}
 #label {
   font-size:8px; font-weight:700; letter-spacing:.09em;
   color:rgba(255,255,255,.35);
   line-height:1;
+}
+#sub {
+  font-size:8px; font-weight:600; letter-spacing:.04em;
+  color:rgba(255,255,255,.28);
+  line-height:1; white-space:nowrap;
 }
 #ping {
   font-size:26px; font-weight:800; line-height:1;
@@ -58,24 +66,29 @@ html, body {
 <body>
 <div id="wrap">
   <div id="accent"></div>
-  <div>
+  <div id="info-col">
     <div id="label">PING</div>
+    <div id="sub">—</div>
   </div>
   <div id="ping">--</div>
   <div id="unit">ms</div>
   <div id="close" onclick="closeOverlay()">✕</div>
 </div>
 <script>
-const { ipcRenderer } = require('electron');
-
 function closeOverlay() {
-  ipcRenderer.send('overlay-close');
+  window.overlayAPI.closeOverlay();
 }
 
-ipcRenderer.on('ping-update', (_, data) => {
+window.overlayAPI.onPingUpdate((data) => {
   const ping = document.getElementById('ping');
   const accent = document.getElementById('accent');
   const unit = document.getElementById('unit');
+  const sub = document.getElementById('sub');
+
+  // Sub info: jitter + loss
+  const jitterStr = (data.jitter != null && data.jitter > 0) ? `↕${data.jitter}ms` : '↕—';
+  const lossStr   = (data.loss   != null)                    ? `${data.loss}% loss` : '—% loss';
+  sub.textContent = `${jitterStr} · ${lossStr}`;
 
   if (data.ms === null || data.ms === undefined) {
     ping.textContent = 'OUT';
