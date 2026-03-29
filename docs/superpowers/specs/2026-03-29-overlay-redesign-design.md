@@ -46,7 +46,12 @@ window.electronAPI.sendPingData({
   router_ms: d.router_ms ?? null,
   geo_city: d.geo_city || '',
   geo_country: d.geo_country || '',
-  history: (d.history || []).slice(-10)   // array of ms|null, last 10 pings
+  history: (d.history || []).slice(-10),  // array of ms|null, last 10 pings
+  overlayColumns: {
+    jitter:    cfg.overlayJitter    !== false,
+    loss:      cfg.overlayLoss      !== false,
+    sparkline: cfg.overlaySparkline !== false,
+  }
 });
 ```
 
@@ -89,9 +94,22 @@ width: 310, height: 60,
 - Read `data.jitter` → update `#jitter-val`, apply amber color if > 10
 - Read `data.loss` → update `#loss-val`, apply green/amber/red
 - Read `data.history` (array of ms|null, up to 10) → update 10 `.spark-bar` divs: height proportional to max in window, color per threshold, gray for null
+- Read `data.overlayColumns` → show/hide each column and its adjacent divider (`display: none` / `display: ''`)
 - Accent bar + ping color logic: unchanged
 
-### 4. `overlay-preload.js` — no changes
+### 4. `src/index.html` — Settings tab (Overlay section)
+
+Add three checkboxes under a new "Overlay" group in the Settings tab:
+
+| Setting key        | Label             | Default |
+|--------------------|-------------------|---------|
+| `overlayJitter`    | Show Jitter       | `true`  |
+| `overlayLoss`      | Show Loss         | `true`  |
+| `overlaySparkline` | Show Sparkline    | `true`  |
+
+Each checkbox calls `saveSetting(key, checked)` on change. No Python sync needed — these are renderer-only preferences.
+
+### 5. `overlay-preload.js` — no changes
 
 Data passes through `ipcRenderer.on('ping-update', ...)` unchanged.
 
@@ -103,4 +121,4 @@ Data passes through `ipcRenderer.on('ping-update', ...)` unchanged.
 
 - Router ms column (received in payload but not displayed — keeping the layout clean)
 - Compact/expanded toggle
-- Configurable columns
+- Overlay window auto-resize when columns are hidden (columns hide in place, fixed 310px width)
