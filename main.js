@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage } = require('electron')
+const { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, globalShortcut } = require('electron')
 app.commandLine.appendSwitch('disable-features', 'AutofillServerCommunication,Autofill')
 const path = require('path')
 const { spawn, execSync } = require('child_process')
@@ -85,7 +85,7 @@ function sendUpdateStatus(data) {
 }
 
 // ─── Settings ─────────────────────────────────────────────────────────────────
-const SETTINGS_DEFAULTS = { startup: false, tray: true, notify: true, spikeMs: 150, lossPct: 5, pingInterval: 2, warnMs: 80, critMs: 150 }
+const SETTINGS_DEFAULTS = { startup: false, startMinimized: false, tray: true, notify: true, spikeMs: 150, lossPct: 5, pingInterval: 2, warnMs: 80, critMs: 150, overlayHotkey: 'Alt+Shift+O' }
 let _settingsCache = null
 
 function getSettingsPath() {
@@ -109,6 +109,27 @@ function saveSettings(cfg) {
     _settingsCache = Object.assign({}, cfg)
   } catch(e) {
     console.error('[settings] save error:', e.message)
+  }
+}
+
+function registerOverlayHotkey(hotkey) {
+  globalShortcut.unregisterAll()
+  if (!hotkey) return
+  // Reject non-ASCII or invalid keys — reset to default and bail
+  if ([...hotkey].some(c => c.charCodeAt(0) > 127) || /BracketLeft|BracketRight|Semicolon|Quote|Backquote|Comma|Period|Slash|Backslash|Minus|Equal/.test(hotkey)) {
+    console.error('[hotkey] invalid accelerator, resetting to default:', hotkey)
+    const cfg = loadSettings()
+    saveSettings({ ...cfg, overlayHotkey: SETTINGS_DEFAULTS.overlayHotkey })
+    hotkey = SETTINGS_DEFAULTS.overlayHotkey
+  }
+  try {
+    const ok = globalShortcut.register(hotkey, () => {
+      if (overlay && !overlay.isDestroyed()) closeOverlay()
+      else createOverlay()
+    })
+    if (!ok) console.error('[hotkey] registration failed (in use?):', hotkey)
+  } catch(e) {
+    console.error('[hotkey] failed to register:', hotkey, e.message)
   }
 }
 
@@ -167,7 +188,7 @@ function createOverlay() {
   }
   const cfg = loadSettings()
   overlay = new BrowserWindow({
-    width: 160, height: 68,
+    width: 310, height: 60,
     x: cfg.overlayX ?? undefined,
     y: cfg.overlayY ?? undefined,
     frame: false,
@@ -354,7 +375,8 @@ function createWindow() {
     const cfg = loadSettings()
     useTray = cfg.tray !== false
     createTray()
-    win.show()
+    registerOverlayHotkey(cfg.overlayHotkey || SETTINGS_DEFAULTS.overlayHotkey)
+    if (!cfg.startMinimized) win.show()
     initUpdater()
   })
 
@@ -380,6 +402,7 @@ app.whenReady().then(() => {
 })
 
 app.on('before-quit', () => {
+  globalShortcut.unregisterAll()
   killBackend()
   killBackendByName()
 })
@@ -414,6 +437,11 @@ ipcMain.on('set-startup', (_, enable) => {
 
 ipcMain.on('overlay-open',  () => createOverlay())
 ipcMain.on('overlay-close', () => closeOverlay())
+ipcMain.on('set-overlay-hotkey', (_, hotkey) => {
+  const cfg = loadSettings()
+  saveSettings({ ...cfg, overlayHotkey: hotkey })
+  registerOverlayHotkey(hotkey)
+})
 
 ipcMain.on('ping-data', (_, data) => {
   updateTrayIcon(data.status || 'waiting')
