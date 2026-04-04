@@ -7,6 +7,10 @@ function switchTab(tab) {
     ws.send(JSON.stringify({type:'get_switches'}));
     ws.send(JSON.stringify({type:'get_hourly'}));
   }
+  if (tab==='heatmap' && ws && ws.readyState===1) {
+    initHeatmap();
+    ws.send(JSON.stringify({type:'get_heatmap'}));
+  }
 }
 
 function switchSettingsTab(name, el) {
@@ -85,7 +89,7 @@ function toggleOverlay() {
 }
 
 // ── Settings ───────────────────────────────────────────────────────────────
-let cfg={startup:false,startMinimized:false,tray:true,spikeMs:150,lossPct:5,pingInterval:2,warnMs:80,critMs:150,spikeThreshold:10,overlayJitter:true,overlayLoss:true,overlaySparkline:true,notificationsEnabled:true,notifSpike:true,notifDisconnect:true,notifReconnect:true,notifLoss:true,notifServerSwitch:true,notifSpikeCooldown:30,notifLossCooldown:30,notifLossThreshold:5};
+let cfg={startup:false,startMinimized:false,tray:true,spikeMs:150,lossPct:5,pingInterval:2,warnMs:80,critMs:150,spikeThreshold:10,overlayJitter:true,overlayLoss:true,overlaySparkline:true,notificationsEnabled:true,notifSpike:true,notifDisconnect:true,notifReconnect:true,notifLoss:true,notifServerSwitch:true,notifSpikeCooldown:30,notifLossCooldown:30,notifLossThreshold:5,overlayOpacity:100,overlayScale:1.0,overlayTheme:'green',autoPauseOverlay:true};
 
 function applySettingsToUI(){
   document.getElementById('s-startup').checked=cfg.startup||false;
@@ -118,6 +122,16 @@ function applySettingsToUI(){
   if (lc) lc.value = cfg.notifLossCooldown != null ? cfg.notifLossCooldown : 30;
   const lt = document.getElementById('s-notif-loss-thr');
   if (lt) lt.value = cfg.notifLossThreshold != null ? cfg.notifLossThreshold : 5;
+  const opacityInput = document.getElementById('s-overlay-opacity')
+  if (opacityInput) {
+    opacityInput.value = cfg.overlayOpacity ?? 100
+    const opacityDisplay = document.getElementById('s-overlay-opacity-val')
+    if (opacityDisplay) opacityDisplay.textContent = (cfg.overlayOpacity ?? 100) + '%'
+  }
+  document.querySelectorAll('[data-scale]').forEach(b => b.classList.toggle('active', +b.dataset.scale === (cfg.overlayScale ?? 1.0)))
+  document.querySelectorAll('[data-theme]').forEach(b => b.classList.toggle('active', b.dataset.theme === (cfg.overlayTheme || 'green')))
+  const autoPause = document.getElementById('s-auto-pause-overlay')
+  if (autoPause) autoPause.checked = cfg.autoPauseOverlay !== false
 }
 
 function saveSetting(k,v){
@@ -135,6 +149,13 @@ function saveSetting(k,v){
   }
   if(k==='spikeThreshold'){
     if(ws&&ws.readyState===1) ws.send(JSON.stringify({type:'settings',spikeThreshold:v}));
+  }
+  if (k === 'overlayOpacity' || k === 'overlayScale' || k === 'overlayTheme') {
+    if (window.electronAPI) window.electronAPI.send('set-overlay-config', {
+      opacity: cfg.overlayOpacity,
+      scale:   cfg.overlayScale,
+      theme:   cfg.overlayTheme,
+    })
   }
 }
 function setWarn_(v, skipSave){
