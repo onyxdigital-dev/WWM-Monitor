@@ -1,11 +1,24 @@
 let ws;
 let _notifLastAt = { spike: 0, loss: 0 };
+let _discordLastAt = { spike: 0, loss: 0 };
 let _prevRunning = null;
 let _prevServerIp = null;
 let WARN=80, CRIT=150;
 let _chartPeriod = '24h';
 let _lastDailyData = [];
 let _hopsExpanded = false;
+
+function sendDiscordWebhook(title, description, color) {
+  const url = cfg.discordWebhook;
+  if (!url || !cfg.discordEnabled) return;
+  fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      embeds: [{ title, description, color, timestamp: new Date().toISOString() }]
+    })
+  }).catch(() => {});
+}
 
 function connect() {
   ws = new WebSocket('ws://localhost:7373');
@@ -261,7 +274,6 @@ function updateLive(d) {
       if (!_prevRunning && d.running && cfg.notifReconnect !== false)
         window.electronAPI.notify('WWM Monitor — Verbunden', `${loc ? loc + ' · ' : ''}${ms != null ? ms + ' ms' : ''}`);
     }
-    _prevRunning = !!d.running;
 
     // Server-Switch notification
     if (cfg.notifServerSwitch !== false && _prevServerIp !== null && d.server_ip && d.server_ip !== _prevServerIp) {
@@ -288,5 +300,40 @@ function updateLive(d) {
       }
     }
   }
+
+  // ── Discord webhook triggers ────────────────────────────────────────────
+  if (cfg.discordEnabled && cfg.discordWebhook) {
+    const _now = Date.now() / 1000;
+    const _loc = d.geo_city ? ' \u00b7 ' + d.geo_city : '';
+    const _ms  = ms != null ? ms : '?';
+
+    if (_prevRunning !== null && _prevRunning && !d.running && cfg.discordDisconnect)
+      sendDiscordWebhook('\ud83d\udd34 Verbindung verloren', 'WWM Server nicht erreichbar', 15158332);
+
+    if (_prevRunning !== null && !_prevRunning && d.running && cfg.discordReconnect)
+      sendDiscordWebhook('\ud83d\udfe2 Verbunden', (d.geo_city || d.geo_country || '') + ' \u00b7 ' + _ms + ' ms', 3066993);
+
+    if (_prevServerIp !== null && d.server_ip && d.server_ip !== _prevServerIp && cfg.discordServerSwitch)
+      sendDiscordWebhook('\ud83d\udd35 Serverwechsel', (d.geo_city || d.server_ip || '?') + (d.server_ip ? ' (' + d.server_ip + ')' : ''), 3447003);
+
+    if (d.is_spike && ms != null && cfg.discordSpike) {
+      const cooldown = cfg.discordSpikeCooldown ?? 60;
+      if (_now - _discordLastAt.spike >= cooldown) {
+        _discordLastAt.spike = _now;
+        sendDiscordWebhook('\ud83d\udfe1 Ping Spike', 'Ping: ' + _ms + ' ms' + _loc, 16776960);
+      }
+    }
+
+    if (d.running && cfg.discordLoss) {
+      const threshold = cfg.discordLossThreshold ?? 5;
+      const cooldown  = cfg.discordLossCooldown ?? 60;
+      if (loss >= threshold && _now - _discordLastAt.loss >= cooldown) {
+        _discordLastAt.loss = _now;
+        sendDiscordWebhook('\ud83d\udd34 Paketverlust', 'Loss: ' + loss + '%' + _loc, 15158332);
+      }
+    }
+  }
+
+  _prevRunning = !!d.running;
   if (d.server_ip) _prevServerIp = d.server_ip;
 }
