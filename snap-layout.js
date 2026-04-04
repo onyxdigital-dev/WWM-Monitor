@@ -1,74 +1,87 @@
 /**
  * snap-layout.js
- * Enables Windows 11 Snap Layout flyout on the maximize button
- * by subclassing the window procedure and returning HTMAXBUTTON
- * when WM_NCHITTEST fires over the maximize button's screen rect.
+ * Enables Windows 11 Snap Layout flyout by subclassing the WNDPROC
+ * via SetWindowLongPtrW and returning HTMAXBUTTON on WM_NCHITTEST
+ * when the cursor is over the maximize button.
  */
 
-let _koffi = null
-let _subclassProc = null  // keep reference alive to prevent GC
-let _hwnd = null
+const WM_NCHITTEST = 0x0084
+const WM_DESTROY   = 0x0002
+const HTMAXBUTTON  = 9
+const GWLP_WNDPROC = -4
 
-const WM_NCHITTEST    = 0x0084
-const HTMAXBUTTON     = 9
-const HTTRANSPARENT   = -1  // let DefSubclassProc handle
-const GWLP_USERDATA   = -21
+let _origProc = null
+let _newProc  = null  // keep alive — GC would break the callback
+let _koffi    = null
 
-function load() {
-  if (_koffi) return _koffi
+function getHwnd(win) {
+  const buf = win.getNativeWindowHandle()
+  // Buffer contains the HWND integer; read as little-endian
+  return process.arch === 'x64'
+    ? Number(buf.readBigUInt64LE(0))
+    : buf.readUInt32LE(0)
+}
+
+function install(win, getMaxBtnRect) {
+  if (process.platform !== 'win32') return
   try {
     _koffi = require('koffi')
   } catch (e) {
     console.warn('[snap-layout] koffi not available:', e.message)
+    return
   }
-  return _koffi
-}
-
-/**
- * Install Snap Layout support on the given BrowserWindow.
- * maxBtnRect is a getter function: () => { x, y, w, h } in screen pixels
- */
-function install(win, getMaxBtnRect) {
-  if (process.platform !== 'win32') return
-  const koffi = load()
-  if (!koffi) return
 
   try {
-    const user32 = koffi.load('user32.dll')
-    const comctl32 = koffi.load('comctl32.dll')
+    const user32   = _koffi.load('user32.dll')
+    const kernel32 = _koffi.load('kernel32.dll')
 
-    // Subclass callback type: (hwnd, msg, wParam, lParam, uIdSubclass, dwRefData) -> LRESULT
-    const SUBCLASSPROC = koffi.proto('__stdcall', 'SUBCLASSPROC', 'intptr', [
-      'void *', 'uint32', 'uintptr', 'intptr', 'uintptr', 'uintptr'
+    const WndProcProto = _koffi.proto('__stdcall', 'WndProc', 'intptr', [
+      'uintptr', 'uint32', 'uintptr', 'intptr'
     ])
 
-    const SetWindowSubclass = comctl32.func('__stdcall', 'SetWindowSubclass', 'bool', [
-      'void *', koffi.pointer(SUBCLASSPROC), 'uintptr', 'uintptr'
+    const SetWindowLongPtrW = user32.func('__stdcall', 'SetWindowLongPtrW', 'intptr', [
+      'uintptr', 'int32', 'intptr'
     ])
-    const DefSubclassProc = comctl32.func('__stdcall', 'DefSubclassProc', 'intptr', [
-      'void *', 'uint32', 'uintptr', 'intptr'
+    const CallWindowProcW = user32.func('__stdcall', 'CallWindowProcW', 'intptr', [
+      'intptr', 'uintptr', 'uint32', 'uintptr', 'intptr'
     ])
-    const GetCursorPos = user32.func('__stdcall', 'GetCursorPos', 'bool', [koffi.out(koffi.pointer('int32[2]'))])
+    const GetLastError = kernel32.func('__stdcall', 'GetLastError', 'uint32', [])
 
-    _hwnd = win.getNativeWindowHandle()
+    const hwnd = getHwnd(win)
+    if (!hwnd) {
+      console.warn('[snap-layout] could not get HWND')
+      return
+    }
 
-    _subclassProc = koffi.register((hwnd, msg, wParam, lParam, uIdSubclass, dwRefData) => {
+    _newProc = _koffi.register((hWnd, msg, wParam, lParam) => {
       if (msg === WM_NCHITTEST) {
-        const pt = [0, 0]
-        GetCursorPos(pt)
-        const cx = pt[0], cy = pt[1]
         const rect = getMaxBtnRect()
-        if (rect && cx >= rect.x && cx < rect.x + rect.w && cy >= rect.y && cy < rect.y + rect.h) {
-          return HTMAXBUTTON
+        if (rect) {
+          // lParam low word = x, high word = y (screen coords, signed)
+          const sx = (lParam & 0xFFFF)
+          const sy = ((lParam >> 16) & 0xFFFF)
+          // Sign-extend 16-bit values
+          const cx = sx >= 0x8000 ? sx - 0x10000 : sx
+          const cy = sy >= 0x8000 ? sy - 0x10000 : sy
+          if (cx >= rect.x && cx < rect.x + rect.w &&
+              cy >= rect.y && cy < rect.y + rect.h) {
+            return HTMAXBUTTON
+          }
         }
       }
-      return DefSubclassProc(hwnd, msg, wParam, lParam)
-    }, koffi.pointer(SUBCLASSPROC))
+      return CallWindowProcW(_origProc, hWnd, msg, wParam, lParam)
+    }, _koffi.pointer(WndProcProto))
 
-    const ok = SetWindowSubclass(_hwnd, _subclassProc, 1, 0)
-    if (!ok) {
-      console.warn('[snap-layout] SetWindowSubclass failed')
+    _origProc = SetWindowLongPtrW(hwnd, GWLP_WNDPROC, _koffi.address(_newProc))
+
+    if (!_origProc) {
+      const err = GetLastError()
+      console.warn('[snap-layout] SetWindowLongPtrW failed, error:', err)
+      _newProc = null
+      return
     }
+
+    console.log('[snap-layout] installed, hwnd:', hwnd.toString(16))
   } catch (e) {
     console.warn('[snap-layout] setup failed:', e.message)
   }
