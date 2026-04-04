@@ -40,6 +40,10 @@ function connect() {
       drawDailyPing(_lastDailyData);
       drawDailyJitter(_lastDailyData);
     }
+    if (msg.type==='session_pings') {
+      const sessRow = (sessAllRows||[]).find(r => r.session_id === msg.session_id);
+      if (sessRow) renderSessionModal(sessRow, msg.data || []);
+    }
   };
 }
 

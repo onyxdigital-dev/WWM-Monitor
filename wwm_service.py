@@ -165,6 +165,18 @@ def get_events():
         print(f'[db] get_events: {e}')
         return []
 
+def get_session_pings(session_id):
+    try:
+        with _db_lock:
+            rows=get_db().execute(
+                "SELECT ts,ping_ms,status,jitter FROM pings WHERE session_id=? ORDER BY id ASC LIMIT 500",
+                (session_id,)
+            ).fetchall()
+        return [dict(r) for r in rows]
+    except Exception as e:
+        print(f'[db] get_session_pings: {e}')
+        return []
+
 def get_sessions():
     try:
         with _db_lock:
@@ -565,6 +577,10 @@ async def handler(ws):
                 period=data.get('period',7)
                 if period not in (7,30):period=7
                 await ws.send(json.dumps({'type':'daily','data':get_daily_stats(period),'period':period}))
+            if data.get('type')=='get_session_pings':
+                sid=data.get('session_id','')
+                if sid:
+                    await ws.send(json.dumps({'type':'session_pings','session_id':sid,'data':get_session_pings(sid)}))
             if data.get('type')=='clear_data':
                 with _db_lock:
                     db=get_db()
