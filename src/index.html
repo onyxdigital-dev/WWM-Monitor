@@ -38,6 +38,9 @@
       <button class="sb-win-btn no-drag" onclick="minimize()" title="Minimize">
         <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><rect x="1" y="4.5" width="8" height="1" fill="currentColor"/></svg>
       </button>
+      <button class="sb-win-btn no-drag" id="maximize-btn" onclick="toggleMaximize()" title="Maximize">
+        <svg id="maximize-icon" width="10" height="10" viewBox="0 0 10 10" fill="none"><rect x="1.5" y="1.5" width="7" height="7" rx="0.5" stroke="currentColor" stroke-width="1.1" fill="none"/></svg>
+      </button>
       <button class="sb-win-btn close no-drag" onclick="closeApp()" title="Close">
         <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1.5 1.5l7 7M8.5 1.5l-7 7" stroke="currentColor" stroke-width="1.1" stroke-linecap="square"/></svg>
       </button>
@@ -685,6 +688,16 @@ window.addEventListener('load',()=>{
   loadSettings();
   connect();
   initUpdater();
+  if (window.electronAPI && window.electronAPI.onWindowState) {
+    window.electronAPI.onWindowState(({maximized}) => {
+      const icon = document.getElementById('maximize-icon');
+      const btn  = document.getElementById('maximize-btn');
+      if (btn) btn.title = maximized ? 'Restore' : 'Maximize';
+      if (icon) icon.innerHTML = maximized
+        ? '<path d="M1.5 3.5h5v5h-5z" stroke="currentColor" stroke-width="1.1" fill="none"/><path d="M3.5 3.5V1.5h5v5H6.5" stroke="currentColor" stroke-width="1.1" fill="none"/>'
+        : '<rect x="1.5" y="1.5" width="7" height="7" rx="0.5" stroke="currentColor" stroke-width="1.1" fill="none"/>';
+    });
+  }
   let _resizeTimer=null;
   window.addEventListener('resize',()=>{
     if(zoomAnim){cancelAnimationFrame(zoomAnim);zoomAnim=null;}

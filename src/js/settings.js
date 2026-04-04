@@ -30,6 +30,7 @@ function switchSettingsTab(name, el) {
 
 function minimize() { if(window.electronAPI) window.electronAPI.minimize(); }
 function closeApp()  { if(window.electronAPI) window.electronAPI.close(); }
+function toggleMaximize() { if(window.electronAPI) window.electronAPI.send('toggle-maximize'); }
 
 // ── Auto Updater ─────────────────────────────────────────────────────────────
 let updateDownloaded = false;

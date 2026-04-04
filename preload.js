@@ -12,6 +12,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   sendPingData:    (data) => ipcRenderer.send('ping-data', data),
   getAppVersion:   () => ipcRenderer.invoke('get-app-version'),
   notify:          (title, body) => ipcRenderer.send('notify', title, body),
+  onWindowState:   (cb) => ipcRenderer.on('window-state', (_, data) => cb(data)),
   // Updater
   onUpdateStatus:  (cb) => ipcRenderer.on('update-status', (_, data) => cb(data)),
   installUpdate:   () => ipcRenderer.send('update-install-now'),

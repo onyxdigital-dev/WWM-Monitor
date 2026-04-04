@@ -361,6 +361,8 @@ function createWindow() {
 
   win.on('resize', applyRoundedShape)
   win.on('unmaximize', applyRoundedShape)
+  win.on('maximize',   () => { if (win && !win.isDestroyed()) win.webContents.send('window-state', { maximized: true }) })
+  win.on('unmaximize', () => { if (win && !win.isDestroyed()) win.webContents.send('window-state', { maximized: false }) })
 
   win.on('close', (e) => {
     if (isQuitting) return
@@ -416,6 +418,11 @@ ipcMain.on('set-startup', (_, enable) => {
 
 ipcMain.on('overlay-open',  () => createOverlay())
 ipcMain.on('overlay-close', () => closeOverlay())
+
+ipcMain.on('toggle-maximize', () => {
+  if (!win) return
+  if (win.isMaximized()) win.unmaximize(); else win.maximize()
+})
 ipcMain.on('set-overlay-config', (_, cfg) => {
   if (!overlay || overlay.isDestroyed()) return
   if (cfg.opacity != null) overlay.setOpacity(cfg.opacity / 100)
