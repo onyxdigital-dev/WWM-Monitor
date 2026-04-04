@@ -1,4 +1,7 @@
 // ── Dashboard ──────────────────────────────────────────────────────────────
+let _modalSessionId = null
+let _noteDebounce = null
+
 function setHeroVal(id,text,color){const el=document.getElementById(id);if(!el)return;el.textContent=text;el.style.color=color;}
 function setText(id,text){const el=document.getElementById(id);if(el)el.textContent=text;}
 function calcCombinedScore(avg,lossPct,jitter){
@@ -248,6 +251,7 @@ function downloadCSV(csvStr){
 }
 
 function openSessionDetail(sessionId) {
+  _modalSessionId = sessionId
   if (ws && ws.readyState === 1) ws.send(JSON.stringify({type:'get_session_pings', session_id: sessionId}));
 }
 
@@ -287,6 +291,19 @@ function renderSessionModal(sessRow, pings) {
     drawModalGraph(document.getElementById('modal-ping-canvas'), pingVals, WARN, CRIT);
     drawModalGraph(document.getElementById('modal-jitter-canvas'), jitterVals, 10, 20);
   });
+  // Clear and request note
+  const noteEl = document.getElementById('modal-note')
+  if (noteEl) noteEl.value = ''
+  if (ws && ws.readyState === 1)
+    ws.send(JSON.stringify({type:'get_note', session_id: sessRow.session_id}))
+}
+
+function debounceSaveNote(value) {
+  clearTimeout(_noteDebounce)
+  _noteDebounce = setTimeout(() => {
+    if (_modalSessionId && ws && ws.readyState === 1)
+      ws.send(JSON.stringify({type:'save_note', session_id: _modalSessionId, note: value}))
+  }, 500)
 }
 
 function drawModalGraph(canvas, vals, warnV, critV) {
