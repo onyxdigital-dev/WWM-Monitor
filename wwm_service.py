@@ -286,25 +286,6 @@ def get_daily_stats(days):
         print(f'[db] get_daily_stats: {e}')
         return []
 
-def get_heatmap_stats():
-    try:
-        with _db_lock:
-            rows=get_db().execute("""
-                SELECT
-                  CAST(strftime('%w', ts) AS INTEGER) as dow,
-                  CAST(strftime('%H', ts) AS INTEGER) as hour,
-                  AVG(CASE WHEN ping_ms>0 THEN ping_ms END) as avg_ms,
-                  COUNT(*) as total
-                FROM pings
-                WHERE ping_ms>0
-                GROUP BY dow, hour
-                ORDER BY dow, hour
-            """).fetchall()
-        return [dict(r) for r in rows]
-    except Exception as e:
-        print(f'[db] get_heatmap_stats: {e}')
-        return []
-
 def save_session_note(session_id, note):
     with _db_lock:
         get_db().execute(
@@ -627,8 +608,6 @@ async def handler(ws):
                 period=data.get('period',7)
                 if period not in (7,30):period=7
                 await ws.send(json.dumps({'type':'daily','data':get_daily_stats(period),'period':period}))
-            if data.get('type')=='get_heatmap':
-                await ws.send(json.dumps({'type':'heatmap','data':get_heatmap_stats()}))
             if data.get('type')=='get_session_pings':
                 sid=data.get('session_id','')
                 if sid:

@@ -7,10 +7,6 @@ function switchTab(tab) {
     ws.send(JSON.stringify({type:'get_switches'}));
     ws.send(JSON.stringify({type:'get_hourly'}));
   }
-  if (tab==='heatmap' && ws && ws.readyState===1) {
-    initHeatmap();
-    ws.send(JSON.stringify({type:'get_heatmap'}));
-  }
 }
 
 function switchSettingsTab(name, el) {

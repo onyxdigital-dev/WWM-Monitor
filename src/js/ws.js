@@ -58,7 +58,6 @@ function connect() {
       const sessRow = (sessAllRows||[]).find(r => r.session_id === msg.session_id);
       if (sessRow) renderSessionModal(sessRow, msg.data || []);
     }
-    if (msg.type==='heatmap') { drawHeatmap(msg.data); }
     if (msg.type==='note') {
       const modal = document.getElementById('session-modal')
       if (modal && modal.classList.contains('modal-visible')) {
