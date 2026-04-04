@@ -468,6 +468,15 @@ ipcMain.on('ping-data', (_, data) => {
     const label = data.ms != null ? `${data.ms} ms` : 'timeout'
     win.setTitle(`WWM Monitor — ${label}`)
   }
+  if (tray && !tray.isDestroyed()) {
+    if (data.running === false) {
+      tray.setToolTip('WWM Monitor · waiting')
+    } else if (data.ms != null) {
+      tray.setToolTip(`WWM Monitor · ${data.ms} ms`)
+    } else {
+      tray.setToolTip('WWM Monitor · timeout')
+    }
+  }
   if (overlay && !overlay.isDestroyed()) {
     overlay.webContents.send('ping-update', data)
   }
