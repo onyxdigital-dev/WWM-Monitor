@@ -37,3 +37,6 @@ desktop.ini
 CLAUDE.md
 .superpowers
 docs/
+
+# Git worktrees
+.worktrees/
