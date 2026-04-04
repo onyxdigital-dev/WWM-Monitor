@@ -330,3 +330,7 @@ tbody td:first-child { color:var(--text); font-family:'Consolas',monospace; font
 .hop-num { font-size:9px; font-weight:700; color:rgba(255,255,255,0.3); min-width:14px; text-align:right; }
 .hop-ip  { font-size:10px; font-family:'Consolas',monospace; color:rgba(255,255,255,0.6); }
 
+/* Range slider */
+input[type=range] { -webkit-appearance:none; appearance:none; height:4px; border-radius:2px; background:rgba(255,255,255,0.15); outline:none; cursor:pointer; }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; appearance:none; width:14px; height:14px; border-radius:50%; background:rgba(255,255,255,0.9); cursor:pointer; }
+
