@@ -211,9 +211,11 @@ function createOverlay() {
   overlay.once('ready-to-show', () => {
     overlay.show()
     const startCfg = loadSettings()
+    const scale = startCfg.overlayScale || 1.0
+    overlay.setSize(Math.round(310 * scale), Math.round(60 * scale))
     overlay.webContents.send('overlay:config', {
       theme: startCfg.overlayTheme || 'green',
-      scale: startCfg.overlayScale || 1.0,
+      scale,
     })
     overlay.setOpacity((startCfg.overlayOpacity ?? 100) / 100)
   })
@@ -450,6 +452,7 @@ ipcMain.on('overlay-close', () => closeOverlay())
 ipcMain.on('set-overlay-config', (_, cfg) => {
   if (!overlay || overlay.isDestroyed()) return
   if (cfg.opacity != null) overlay.setOpacity(cfg.opacity / 100)
+  if (cfg.scale   != null) overlay.setSize(Math.round(310 * cfg.scale), Math.round(60 * cfg.scale))
   overlay.webContents.send('overlay:config', cfg)
   const current = loadSettings()
   const updates = {}
