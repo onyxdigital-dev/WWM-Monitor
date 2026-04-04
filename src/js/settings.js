@@ -89,7 +89,7 @@ function toggleOverlay() {
 }
 
 // ── Settings ───────────────────────────────────────────────────────────────
-let cfg={startup:false,startMinimized:false,tray:true,spikeMs:150,lossPct:5,pingInterval:2,warnMs:80,critMs:150,spikeThreshold:10,overlayJitter:true,overlayLoss:true,overlaySparkline:true,notificationsEnabled:true,notifSpike:true,notifDisconnect:true,notifReconnect:true,notifLoss:true,notifServerSwitch:true,notifSpikeCooldown:30,notifLossCooldown:30,notifLossThreshold:5,overlayOpacity:100,overlayScale:1.0,overlayTheme:'green',autoPauseOverlay:true};
+let cfg={startup:false,startMinimized:false,tray:true,spikeMs:150,lossPct:5,pingInterval:2,warnMs:80,critMs:150,spikeThreshold:10,overlayJitter:true,overlayLoss:true,overlaySparkline:true,notificationsEnabled:true,notifSpike:true,notifDisconnect:true,notifReconnect:true,notifLoss:true,notifServerSwitch:true,notifSpikeCooldown:30,notifLossCooldown:30,notifLossThreshold:5,overlayOpacity:100,overlayScale:1.0,overlayTheme:'green',autoPauseOverlay:true,historySize:50,dataRetention:30};
 
 function applySettingsToUI(){
   document.getElementById('s-startup').checked=cfg.startup||false;
@@ -132,6 +132,8 @@ function applySettingsToUI(){
   document.querySelectorAll('[data-theme]').forEach(b => b.classList.toggle('active', b.dataset.theme === (cfg.overlayTheme || 'green')))
   const autoPause = document.getElementById('s-auto-pause-overlay')
   if (autoPause) autoPause.checked = cfg.autoPauseOverlay !== false
+  setHistorySize_(cfg.historySize || 50, true)
+  setDataRetention_(cfg.dataRetention || 30, true)
 }
 
 function saveSetting(k,v){
@@ -149,6 +151,12 @@ function saveSetting(k,v){
   }
   if(k==='spikeThreshold'){
     if(ws&&ws.readyState===1) ws.send(JSON.stringify({type:'settings',spikeThreshold:v}));
+  }
+  if (k === 'historySize') {
+    if (ws && ws.readyState === 1) ws.send(JSON.stringify({type:'settings', historySize: v}))
+  }
+  if (k === 'dataRetention') {
+    if (ws && ws.readyState === 1) ws.send(JSON.stringify({type:'settings', dataRetention: v}))
   }
   if (k === 'overlayOpacity' || k === 'overlayScale' || k === 'overlayTheme') {
     if (window.electronAPI) window.electronAPI.send('set-overlay-config', {
@@ -169,6 +177,14 @@ function setCrit_(v, skipSave){
 function setSpikeThreshold_(v, skipSave){
   document.querySelectorAll('[data-spike]').forEach(b=>b.classList.toggle('active',+b.dataset.spike===v));
   if(!skipSave) saveSetting('spikeThreshold',v);
+}
+function setHistorySize_(v, skipSave) {
+  document.querySelectorAll('[data-history]').forEach(b => b.classList.toggle('active', +b.dataset.history === v))
+  if (!skipSave) saveSetting('historySize', v)
+}
+function setDataRetention_(v, skipSave) {
+  document.querySelectorAll('[data-retention]').forEach(b => b.classList.toggle('active', +b.dataset.retention === v))
+  if (!skipSave) saveSetting('dataRetention', v)
 }
 function setInterval_(v, skipSave){
   document.querySelectorAll('.interval-btn[data-val]').forEach(b=>b.classList.toggle('active',+b.dataset.val===v));
