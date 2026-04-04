@@ -286,8 +286,8 @@ def get_heatmap_stats():
         with _db_lock:
             rows=get_db().execute("""
                 SELECT
-                  CAST(strftime('%w', datetime(ts,'unixepoch','localtime')) AS INTEGER) as dow,
-                  CAST(strftime('%H', datetime(ts,'unixepoch','localtime')) AS INTEGER) as hour,
+                  CAST(strftime('%w', ts) AS INTEGER) as dow,
+                  CAST(strftime('%H', ts) AS INTEGER) as hour,
                   AVG(CASE WHEN ping_ms>0 THEN ping_ms END) as avg_ms,
                   COUNT(*) as total
                 FROM pings
