@@ -28,6 +28,11 @@ function connect() {
     // Delay allows backfill_geo to complete for existing IPs before we request sessions
     setTimeout(()=>{
       if(ws&&ws.readyState===1){
+        // Sync saved settings to Python (loadSettings resolves well within 3s)
+        ws.send(JSON.stringify({type:'settings',
+          historySize:   (typeof cfg!=='undefined' && cfg.historySize)   || 50,
+          dataRetention: (typeof cfg!=='undefined' && cfg.dataRetention) || 30,
+        }));
         ws.send(JSON.stringify({type:'get_sessions'}));
         ws.send(JSON.stringify({type:'get_switches'}));
         ws.send(JSON.stringify({type:'get_events'}));
