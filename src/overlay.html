@@ -90,10 +90,12 @@ function closeOverlay() {
   window.overlayAPI.closeOverlay();
 }
 
+let _accentColor = '#22c55e';
+
 function pingColor(ms) {
   if (ms >= 150) return '#ef4444';
   if (ms >= 80)  return '#f59e0b';
-  return '#22c55e';
+  return _accentColor;
 }
 
 function setVisible(id, visible) {
@@ -169,6 +171,20 @@ window.overlayAPI.onPingUpdate((data) => {
   setVisible('d-loss',     cols.loss);
   setVisible('spark',      cols.sparkline);
   setVisible('d-spark',    cols.sparkline);
+});
+
+window.overlayAPI.onConfig((cfg) => {
+  if (cfg.theme) {
+    const themeMap = { green: '#22c55e', blue: '#3b82f6', white: 'rgba(255,255,255,0.9)' };
+    _accentColor = themeMap[cfg.theme] || '#22c55e';
+    const accent = document.getElementById('accent');
+    accent.style.background = _accentColor;
+    accent.style.boxShadow = '0 0 10px ' + _accentColor + 'b3';
+  }
+  if (cfg.scale != null) {
+    document.body.style.transform = 'scale(' + cfg.scale + ')';
+    document.body.style.transformOrigin = 'top left';
+  }
 });
 </script>
 </body>
