@@ -332,13 +332,13 @@ function buildTrayMenu() {
   return Menu.buildFromTemplate([
     { label: 'WWM Monitor', enabled: false },
     { type: 'separator' },
-    { label: 'Anzeigen',   click: () => { if (win) { win.show(); win.focus(); applyRoundedShape() } } },
-    { label: 'Verstecken', click: () => { if (win) win.hide() } },
+    { label: 'Show',   click: () => { if (win) { win.show(); win.focus(); applyRoundedShape() } } },
+    { label: 'Hide', click: () => { if (win) win.hide() } },
     { type: 'separator' },
-    { label: 'Overlay anzeigen',  click: () => createOverlay() },
-    { label: 'Overlay schließen', click: () => closeOverlay() },
+    { label: 'Show Overlay',  click: () => createOverlay() },
+    { label: 'Close Overlay', click: () => closeOverlay() },
     { type: 'separator' },
-    { label: 'Beenden', click: () => { shutdown(); app.exit(0) } }
+    { label: 'Quit', click: () => { shutdown(); app.exit(0) } }
   ])
 }
 
@@ -531,7 +531,7 @@ ipcMain.on('update-install-now', () => {
 
 ipcMain.on('update-check-manual', () => {
   if (!autoUpdater) {
-    sendUpdateStatus({ type: 'error', message: 'Updater nicht verfügbar' })
+    sendUpdateStatus({ type: 'error', message: 'Updater not available' })
     return
   }
   if (!app.isPackaged) {
@@ -561,8 +561,8 @@ ipcMain.on('notify', (_, title, body) => {
 ipcMain.handle('get-updater-log', () => {
   try {
     const logPath = path.join(app.getPath('userData'), 'updater.log')
-    return fs.existsSync(logPath) ? fs.readFileSync(logPath, 'utf-8') : 'Keine Log-Einträge.'
+    return fs.existsSync(logPath) ? fs.readFileSync(logPath, 'utf-8') : 'No log entries.'
   } catch(e) {
-    return 'Fehler beim Lesen des Logs: ' + e.message
+    return 'Error reading log: ' + e.message
   }
 })
