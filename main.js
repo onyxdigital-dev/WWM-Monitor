@@ -10,6 +10,8 @@ let backend = null
 let overlay = null
 let useTray = true
 let isQuitting = false
+let _lastRunning = null
+let _autoPauseTimer = null
 
 // ─── Simple file logger ───────────────────────────────────────────────────────
 function writeLog(msg) {
@@ -479,6 +481,23 @@ ipcMain.on('ping-data', (_, data) => {
   }
   if (overlay && !overlay.isDestroyed()) {
     overlay.webContents.send('ping-update', data)
+  }
+  // Auto-pause overlay
+  const autoCfg = loadSettings()
+  if (autoCfg.autoPauseOverlay) {
+    const running = data.running !== false && data.status !== 'waiting'
+    if (!running && _lastRunning === true) {
+      if (!_autoPauseTimer) {
+        _autoPauseTimer = setTimeout(() => {
+          _autoPauseTimer = null
+          if (overlay && !overlay.isDestroyed()) overlay.hide()
+        }, 10000)
+      }
+    } else if (running && _lastRunning === false) {
+      if (_autoPauseTimer) { clearTimeout(_autoPauseTimer); _autoPauseTimer = null }
+      if (overlay && !overlay.isDestroyed()) overlay.show()
+    }
+    _lastRunning = running
   }
 })
 
