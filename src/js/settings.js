@@ -89,7 +89,7 @@ function toggleOverlay() {
 }
 
 // ── Settings ───────────────────────────────────────────────────────────────
-let cfg={startup:false,startMinimized:false,tray:true,spikeMs:150,lossPct:5,pingInterval:2,warnMs:80,critMs:150,spikeThreshold:10,overlayJitter:true,overlayLoss:true,overlaySparkline:true,notificationsEnabled:true,notifSpike:true,notifDisconnect:true,notifReconnect:true,notifLoss:true,notifServerSwitch:true,notifSpikeCooldown:30,notifLossCooldown:30,notifLossThreshold:5,overlayOpacity:100,overlayScale:1.0,overlayTheme:'green',autoPauseOverlay:true,historySize:50,dataRetention:30};
+let cfg={startup:false,startMinimized:false,tray:true,spikeMs:150,lossPct:5,pingInterval:2,warnMs:80,critMs:150,spikeThreshold:10,overlayJitter:true,overlayLoss:true,overlaySparkline:true,notificationsEnabled:true,notifSpike:true,notifDisconnect:true,notifReconnect:true,notifLoss:true,notifServerSwitch:true,notifSpikeCooldown:30,notifLossCooldown:30,notifLossThreshold:5,overlayOpacity:100,overlayScale:1.0,overlayTheme:'green',autoPauseOverlay:true,historySize:50,dataRetention:30,discordWebhook:'',discordEnabled:false,discordSpike:true,discordDisconnect:true,discordReconnect:true,discordLoss:true,discordServerSwitch:true,discordSpikeCooldown:60,discordLossCooldown:60,discordLossThreshold:5};
 
 function applySettingsToUI(){
   document.getElementById('s-startup').checked=cfg.startup||false;
@@ -134,6 +134,26 @@ function applySettingsToUI(){
   if (autoPause) autoPause.checked = cfg.autoPauseOverlay !== false
   setHistorySize_(cfg.historySize || 50, true)
   setDataRetention_(cfg.dataRetention || 30, true)
+  const dw = document.getElementById('s-discord-webhook')
+  if (dw) dw.value = cfg.discordWebhook || ''
+  const de = document.getElementById('s-discord-enabled')
+  if (de) de.checked = cfg.discordEnabled === true
+  const ds = document.getElementById('s-discord-spike')
+  if (ds) ds.checked = cfg.discordSpike !== false
+  const dd = document.getElementById('s-discord-disconnect')
+  if (dd) dd.checked = cfg.discordDisconnect !== false
+  const dr = document.getElementById('s-discord-reconnect')
+  if (dr) dr.checked = cfg.discordReconnect !== false
+  const dl = document.getElementById('s-discord-loss')
+  if (dl) dl.checked = cfg.discordLoss !== false
+  const dsw = document.getElementById('s-discord-server-switch')
+  if (dsw) dsw.checked = cfg.discordServerSwitch !== false
+  const dsc = document.getElementById('s-discord-spike-cooldown')
+  if (dsc) dsc.value = cfg.discordSpikeCooldown ?? 60
+  const dlc = document.getElementById('s-discord-loss-cooldown')
+  if (dlc) dlc.value = cfg.discordLossCooldown ?? 60
+  const dlt = document.getElementById('s-discord-loss-threshold')
+  if (dlt) dlt.value = cfg.discordLossThreshold ?? 5
 }
 
 function saveSetting(k,v){
