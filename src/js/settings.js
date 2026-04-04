@@ -196,6 +196,10 @@ function setSpikeThreshold_(v, skipSave){
 }
 function setHistorySize_(v, skipSave) {
   document.querySelectorAll('[data-history]').forEach(b => b.classList.toggle('active', +b.dataset.history === v))
+  const pl = document.getElementById('ping-history-label')
+  if (pl) pl.textContent = 'PING HISTORY — last ' + v + ' pings'
+  const jl = document.getElementById('jitter-history-label')
+  if (jl) jl.textContent = 'JITTER HISTORY — last ' + v
   if (!skipSave) saveSetting('historySize', v)
 }
 function setDataRetention_(v, skipSave) {
