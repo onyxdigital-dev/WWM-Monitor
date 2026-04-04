@@ -235,6 +235,7 @@ function updateLive(d) {
   if (window.electronAPI && window.electronAPI.sendPingData)
     window.electronAPI.sendPingData({
       ms, status: d.status, jitter, loss,
+      running: !!d.running,
       router_ms: d.router_ms ?? null,
       geo_city: d.geo_city || '',
       geo_country: d.geo_country || '',
