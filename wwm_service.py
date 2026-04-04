@@ -502,7 +502,7 @@ async def handler(ws):
                 csv=export_csv(data.get('session_id'))
                 await ws.send(json.dumps({'type':'csv_data','csv':csv}))
             if data.get('type')=='settings':
-                global INTERVAL, WARN_MS, CRIT_MS
+                global INTERVAL, WARN_MS, CRIT_MS, SPIKE_THRESH
                 pi=data.get('pingInterval')
                 if pi in (1,2,5):
                     INTERVAL=int(pi)
@@ -512,6 +512,9 @@ async def handler(ws):
                 cm=data.get('critMs')
                 if cm and 20<=int(cm)<=1000:
                     CRIT_MS=int(cm)
+                st=data.get('spikeThreshold')
+                if st and 5<=int(st)<=100:
+                    SPIKE_THRESH=int(st)
             if data.get('type')=='get_hourly':
                 await ws.send(json.dumps({'type':'hourly','data':get_hourly_stats()}))
             if data.get('type')=='clear_data':

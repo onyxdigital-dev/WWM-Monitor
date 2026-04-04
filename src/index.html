@@ -299,6 +299,18 @@
               <button class="interval-btn seg-btn no-drag" data-crit="200" onclick="setCrit_(200)">200ms</button>
             </div>
           </div>
+          <div class="setting-row">
+            <div class="setting-info">
+              <div class="setting-label">Spike-Schwelle</div>
+              <div class="setting-desc">Jitter-Delta (ms) ab dem ein Ping als Spike gilt</div>
+            </div>
+            <div id="s-spike" style="display:flex;gap:3px;">
+              <button class="interval-btn seg-btn no-drag" data-spike="5"  onclick="setSpikeThreshold_(5)">5ms</button>
+              <button class="interval-btn seg-btn no-drag active" data-spike="10" onclick="setSpikeThreshold_(10)">10ms</button>
+              <button class="interval-btn seg-btn no-drag" data-spike="20" onclick="setSpikeThreshold_(20)">20ms</button>
+              <button class="interval-btn seg-btn no-drag" data-spike="30" onclick="setSpikeThreshold_(30)">30ms</button>
+            </div>
+          </div>
           <div style="height:1px;background:var(--border);margin:20px 0;flex-shrink:0;"></div>
           <div class="settings-sec-hdr">Session</div>
           <div class="setting-row">

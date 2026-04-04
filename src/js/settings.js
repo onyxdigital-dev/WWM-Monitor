@@ -84,7 +84,7 @@ function toggleOverlay() {
 }
 
 // ── Settings ───────────────────────────────────────────────────────────────
-let cfg={startup:false,startMinimized:false,tray:true,spikeMs:150,lossPct:5,pingInterval:2,warnMs:80,critMs:150,overlayJitter:true,overlayLoss:true,overlaySparkline:true,notificationsEnabled:true,notifSpike:true,notifDisconnect:true,notifReconnect:true,notifLoss:true,notifServerSwitch:true,notifSpikeCooldown:30,notifLossCooldown:30,notifLossThreshold:5};
+let cfg={startup:false,startMinimized:false,tray:true,spikeMs:150,lossPct:5,pingInterval:2,warnMs:80,critMs:150,spikeThreshold:10,overlayJitter:true,overlayLoss:true,overlaySparkline:true,notificationsEnabled:true,notifSpike:true,notifDisconnect:true,notifReconnect:true,notifLoss:true,notifServerSwitch:true,notifSpikeCooldown:30,notifLossCooldown:30,notifLossThreshold:5};
 
 function applySettingsToUI(){
   document.getElementById('s-startup').checked=cfg.startup||false;
@@ -95,6 +95,7 @@ function applySettingsToUI(){
   setInterval_(cfg.pingInterval||2, true);
   setWarn_(cfg.warnMs||80, true);
   setCrit_(cfg.critMs||150, true);
+  setSpikeThreshold_(cfg.spikeThreshold||10, true);
   document.getElementById('s-overlay-jitter').checked=cfg.overlayJitter!==false;
   document.getElementById('s-overlay-loss').checked=cfg.overlayLoss!==false;
   document.getElementById('s-overlay-sparkline').checked=cfg.overlaySparkline!==false;
@@ -131,6 +132,9 @@ function saveSetting(k,v){
     WARN=cfg.warnMs||80; CRIT=cfg.critMs||150;
     if(ws&&ws.readyState===1) ws.send(JSON.stringify({type:'settings',warnMs:cfg.warnMs,critMs:cfg.critMs}));
   }
+  if(k==='spikeThreshold'){
+    if(ws&&ws.readyState===1) ws.send(JSON.stringify({type:'settings',spikeThreshold:v}));
+  }
 }
 function setWarn_(v, skipSave){
   document.querySelectorAll('[data-warn]').forEach(b=>b.classList.toggle('active',+b.dataset.warn===v));
@@ -139,6 +143,10 @@ function setWarn_(v, skipSave){
 function setCrit_(v, skipSave){
   document.querySelectorAll('[data-crit]').forEach(b=>b.classList.toggle('active',+b.dataset.crit===v));
   if(!skipSave) saveSetting('critMs',v);
+}
+function setSpikeThreshold_(v, skipSave){
+  document.querySelectorAll('[data-spike]').forEach(b=>b.classList.toggle('active',+b.dataset.spike===v));
+  if(!skipSave) saveSetting('spikeThreshold',v);
 }
 function setInterval_(v, skipSave){
   document.querySelectorAll('.interval-btn[data-val]').forEach(b=>b.classList.toggle('active',+b.dataset.val===v));
