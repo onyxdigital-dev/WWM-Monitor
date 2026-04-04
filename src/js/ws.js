@@ -3,6 +3,8 @@ let _notifLastAt = { spike: 0, loss: 0 };
 let _prevRunning = null;
 let _prevServerIp = null;
 let WARN=80, CRIT=150;
+let _chartPeriod = '24h';
+let _lastDailyData = [];
 
 function connect() {
   ws = new WebSocket('ws://localhost:7373');
@@ -33,7 +35,34 @@ function connect() {
     }
     if (msg.type==='hourly')       { drawHourly(msg.data); drawHourlyJitter(msg.data); }
     if (msg.type==='events')       updateEvents(msg.data);
+    if (msg.type==='daily') {
+      _lastDailyData = msg.data || [];
+      drawDailyPing(_lastDailyData);
+      drawDailyJitter(_lastDailyData);
+    }
   };
+}
+
+function setChartPeriod(p) {
+  _chartPeriod = p;
+  document.querySelectorAll('.period-btn').forEach(b => b.classList.toggle('active', b.dataset.period === p));
+  updatePeriodLabels();
+  if (p === '24h') {
+    drawHourly(lastHourlyData);
+    drawHourlyJitter(lastHourlyData);
+  } else {
+    const days = p === '7d' ? 7 : 30;
+    if (ws && ws.readyState === 1) ws.send(JSON.stringify({type:'get_daily', period: days}));
+  }
+}
+
+function updatePeriodLabels() {
+  const labels = { '24h': 'LAST 24H', '7d': 'LAST 7 DAYS', '30d': 'LAST 30 DAYS' };
+  const lbl = labels[_chartPeriod] || 'LAST 24H';
+  const pingEl = document.getElementById('chart-period-label-ping');
+  const jitterEl = document.getElementById('chart-period-label-jitter');
+  if (pingEl) pingEl.textContent = 'PING TREND — ' + lbl;
+  if (jitterEl) jitterEl.textContent = 'JITTER TREND — ' + lbl;
 }
 
 // ── Reset Session ──────────────────────────────────────────────────────────

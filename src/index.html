@@ -169,11 +169,20 @@
         <!-- Dual chart row: ping trend + jitter trend -->
         <div class="dual-chart-row fade-in">
           <div class="card chart-card">
-            <div class="sec-hdr"><div class="sec-bar"></div><div class="sec-title">PING TREND — LAST 24H</div></div>
+            <div class="sec-hdr" style="justify-content:space-between;">
+              <div style="display:flex;align-items:center;gap:8px;"><div class="sec-bar"></div><div class="sec-title" id="chart-period-label-ping">PING TREND — LAST 24H</div></div>
+              <div style="display:flex;gap:3px;">
+                <button class="period-btn seg-btn no-drag active" data-period="24h" onclick="setChartPeriod('24h')">24H</button>
+                <button class="period-btn seg-btn no-drag" data-period="7d" onclick="setChartPeriod('7d')">7D</button>
+                <button class="period-btn seg-btn no-drag" data-period="30d" onclick="setChartPeriod('30d')">30D</button>
+              </div>
+            </div>
             <div class="chart-area"><canvas id="hourly-canvas"></canvas></div>
           </div>
           <div class="card chart-card">
-            <div class="sec-hdr"><div class="sec-bar"></div><div class="sec-title">JITTER TREND — LAST 24H</div></div>
+            <div class="sec-hdr">
+              <div class="sec-bar"></div><div class="sec-title" id="chart-period-label-jitter">JITTER TREND — LAST 24H</div>
+            </div>
             <div class="chart-area"><canvas id="hourly-jitter-canvas"></canvas></div>
           </div>
         </div>

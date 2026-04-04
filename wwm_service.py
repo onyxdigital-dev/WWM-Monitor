@@ -251,6 +251,24 @@ def get_hourly_stats():
         print(f'[db] get_hourly_stats: {e}')
         return []
 
+def get_daily_stats(days):
+    try:
+        cutoff=(datetime.now()-timedelta(days=days)).strftime('%Y-%m-%d')
+        with _db_lock:
+            rows=get_db().execute("""
+                SELECT date(ts) as day,
+                    AVG(CASE WHEN ping_ms>0 THEN ping_ms END) as avg_ms,
+                    AVG(CASE WHEN jitter IS NOT NULL THEN jitter END) as avg_jitter,
+                    COUNT(*) as total,
+                    SUM(CASE WHEN status='TIMEOUT' THEN 1 ELSE 0 END) as timeouts
+                FROM pings WHERE date(ts)>=?
+                GROUP BY day ORDER BY day
+            """,(cutoff,)).fetchall()
+        return [dict(r) for r in rows]
+    except Exception as e:
+        print(f'[db] get_daily_stats: {e}')
+        return []
+
 def export_csv(sid=None):
     try:
         with _db_lock:
@@ -543,6 +561,10 @@ async def handler(ws):
                 await ws.send(json.dumps({'type':'hourly','data':get_hourly_stats()}))
             if data.get('type')=='get_events':
                 await ws.send(json.dumps({'type':'events','data':get_events()}))
+            if data.get('type')=='get_daily':
+                period=data.get('period',7)
+                if period not in (7,30):period=7
+                await ws.send(json.dumps({'type':'daily','data':get_daily_stats(period),'period':period}))
             if data.get('type')=='clear_data':
                 with _db_lock:
                     db=get_db()
