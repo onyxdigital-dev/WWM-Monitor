@@ -75,6 +75,11 @@ def init_db():
             c.execute("ALTER TABLE pings ADD COLUMN dns_ms INTEGER")
         except Exception as e:
             print(f'[db] migrate: {e}')
+        c.execute("""CREATE TABLE IF NOT EXISTS session_notes (
+            session_id TEXT PRIMARY KEY,
+            note TEXT,
+            updated_at TEXT
+        )""")
         # Performance-Indizes
         c.execute("CREATE INDEX IF NOT EXISTS idx_pings_ts         ON pings(ts)")
         c.execute("CREATE INDEX IF NOT EXISTS idx_pings_session_id ON pings(session_id)")
@@ -299,6 +304,21 @@ def get_heatmap_stats():
     except Exception as e:
         print(f'[db] get_heatmap_stats: {e}')
         return []
+
+def save_session_note(session_id, note):
+    with _db_lock:
+        get_db().execute(
+            "INSERT OR REPLACE INTO session_notes VALUES(?,?,?)",
+            (session_id, note, datetime.now().isoformat())
+        )
+        get_db().commit()
+
+def get_session_note(session_id):
+    with _db_lock:
+        row = get_db().execute(
+            "SELECT note FROM session_notes WHERE session_id=?", (session_id,)
+        ).fetchone()
+    return row['note'] if row else ''
 
 def export_csv(sid=None):
     try:
@@ -613,6 +633,15 @@ async def handler(ws):
                 sid=data.get('session_id','')
                 if sid:
                     await ws.send(json.dumps({'type':'session_pings','session_id':sid,'data':get_session_pings(sid)}))
+            if data.get('type')=='save_note':
+                sid=data.get('session_id','')
+                note=data.get('note','')
+                if sid:
+                    save_session_note(sid, note)
+            if data.get('type')=='get_note':
+                sid=data.get('session_id','')
+                note=get_session_note(sid) if sid else ''
+                await ws.send(json.dumps({'type':'note','session_id':sid,'note':note}))
             if data.get('type')=='clear_data':
                 with _db_lock:
                     db=get_db()
