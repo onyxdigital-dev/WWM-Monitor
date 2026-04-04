@@ -289,6 +289,17 @@
               🗑 CLEAR DATA
             </button>
           </div>
+          <div class="setting-row">
+            <div class="setting-info">
+              <div class="setting-label">Datenspeicherung</div>
+              <div class="setting-desc">Wie lange Ping-Daten in der Datenbank behalten werden</div>
+            </div>
+            <div class="seg-btns no-drag">
+              <button class="seg-btn"        data-retention="7"  onclick="document.querySelectorAll('[data-retention]').forEach(b=>b.classList.remove('active'));this.classList.add('active');setDataRetention_(7)">7T</button>
+              <button class="seg-btn active" data-retention="30" onclick="document.querySelectorAll('[data-retention]').forEach(b=>b.classList.remove('active'));this.classList.add('active');setDataRetention_(30)">30T</button>
+              <button class="seg-btn"        data-retention="90" onclick="document.querySelectorAll('[data-retention]').forEach(b=>b.classList.remove('active'));this.classList.add('active');setDataRetention_(90)">90T</button>
+            </div>
+          </div>
         </div>
 
         <!-- MONITORING -->
@@ -337,6 +348,17 @@
               <button class="interval-btn seg-btn no-drag active" data-spike="10" onclick="setSpikeThreshold_(10)">10ms</button>
               <button class="interval-btn seg-btn no-drag" data-spike="20" onclick="setSpikeThreshold_(20)">20ms</button>
               <button class="interval-btn seg-btn no-drag" data-spike="30" onclick="setSpikeThreshold_(30)">30ms</button>
+            </div>
+          </div>
+          <div class="setting-row">
+            <div class="setting-info">
+              <div class="setting-label">Ping-Verlauf</div>
+              <div class="setting-desc">Anzahl der gespeicherten Ping-Werte im Speicher</div>
+            </div>
+            <div class="seg-btns no-drag">
+              <button class="seg-btn active" data-history="50"  onclick="document.querySelectorAll('[data-history]').forEach(b=>b.classList.remove('active'));this.classList.add('active');setHistorySize_(50)">50</button>
+              <button class="seg-btn"        data-history="100" onclick="document.querySelectorAll('[data-history]').forEach(b=>b.classList.remove('active'));this.classList.add('active');setHistorySize_(100)">100</button>
+              <button class="seg-btn"        data-history="200" onclick="document.querySelectorAll('[data-history]').forEach(b=>b.classList.remove('active'));this.classList.add('active');setHistorySize_(200)">200</button>
             </div>
           </div>
           <div style="height:1px;background:var(--border);margin:20px 0;flex-shrink:0;"></div>
