@@ -329,3 +329,7 @@ tbody td:first-child { color:var(--text); font-family:'Consolas',monospace; font
 .hop-row { display:flex; align-items:center; gap:8px; padding:2px 0; }
 .hop-num { font-size:9px; font-weight:700; color:rgba(255,255,255,0.3); min-width:14px; text-align:right; }
 .hop-ip  { font-size:10px; font-family:'Consolas',monospace; color:rgba(255,255,255,0.6); }
+
+/* Heatmap */
+#page-heatmap .card { overflow-x: auto; }
+#heatmap-canvas { max-width: 100%; }
