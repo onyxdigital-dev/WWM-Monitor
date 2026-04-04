@@ -203,13 +203,10 @@ function updateLive(d) {
     _prevRunning = !!d.running;
 
     // Server-Switch notification
-    if (cfg.notificationsEnabled !== false && cfg.notifServerSwitch !== false &&
-        window.electronAPI && window.electronAPI.notify &&
-        _prevServerIp !== null && d.server_ip && d.server_ip !== _prevServerIp) {
+    if (cfg.notifServerSwitch !== false && _prevServerIp !== null && d.server_ip && d.server_ip !== _prevServerIp) {
       const loc = d.geo_city ? `${d.geo_city}, ${d.geo_country} · ` : '';
       window.electronAPI.notify('WWM Monitor — Serverwechsel', `${loc}${d.server_ip}`);
     }
-    if (d.server_ip) _prevServerIp = d.server_ip;
 
     // Spike
     if (d.is_spike && ms != null && cfg.notifSpike !== false) {
@@ -230,4 +227,5 @@ function updateLive(d) {
       }
     }
   }
+  if (d.server_ip) _prevServerIp = d.server_ip;
 }
