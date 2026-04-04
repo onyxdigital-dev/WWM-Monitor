@@ -685,16 +685,20 @@ window.addEventListener('load',()=>{
   loadSettings();
   connect();
   initUpdater();
+  let _resizeTimer=null;
   window.addEventListener('resize',()=>{
     if(zoomAnim){cancelAnimationFrame(zoomAnim);zoomAnim=null;}
-    const c=getCanvas();
-    if(c){view.scale=c.offsetHeight/MAP_H;view.x=(c.offsetWidth-MAP_W*view.scale)/2;view.y=0;}
-    drawMapCanvas();
-    drawGraph();
-    drawJitter();
-    const dc=document.getElementById('dash-map-canvas');
-    if(dc){dashView.scale=dc.offsetHeight/MAP_H;dashView.x=(dc.offsetWidth-MAP_W*dashView.scale)/2;dashView.y=0;}
-    drawDashMap();
+    clearTimeout(_resizeTimer);
+    _resizeTimer=setTimeout(()=>{
+      const c=getCanvas();
+      if(c){view.scale=c.offsetHeight/MAP_H;view.x=(c.offsetWidth-MAP_W*view.scale)/2;view.y=0;}
+      drawMapCanvas();
+      drawGraph();
+      drawJitter();
+      const dc=document.getElementById('dash-map-canvas');
+      if(dc){dashView.scale=dc.offsetHeight/MAP_H;dashView.x=(dc.offsetWidth-MAP_W*dashView.scale)/2;dashView.y=0;}
+      drawDashMap();
+    },80);
   });
 });
 </script>

@@ -267,7 +267,7 @@ function applyRoundedShape() {
       const [w, h] = win.getSize()
       win.setShape(buildRoundedShape(w, h, 14))
     } catch(e) {}
-  }, 16)
+  }, 80)
 }
 
 // ─── Tray icon color by ping status ──────────────────────────────────────────
