@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, globalShortcut } = require('electron')
+const { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, globalShortcut, Notification } = require('electron')
 app.commandLine.appendSwitch('disable-features', 'AutofillServerCommunication,Autofill')
 const path = require('path')
 const { spawn, execSync } = require('child_process')
@@ -85,7 +85,7 @@ function sendUpdateStatus(data) {
 }
 
 // ─── Settings ─────────────────────────────────────────────────────────────────
-const SETTINGS_DEFAULTS = { startup: false, startMinimized: false, tray: true, notify: true, spikeMs: 150, lossPct: 5, pingInterval: 2, warnMs: 80, critMs: 150, overlayHotkey: 'Alt+Shift+O' }
+const SETTINGS_DEFAULTS = { startup: false, startMinimized: false, tray: true, spikeMs: 150, lossPct: 5, pingInterval: 2, warnMs: 80, critMs: 150, overlayHotkey: 'Alt+Shift+O', notificationsEnabled: true, notifSpike: true, notifDisconnect: true, notifReconnect: true, notifLoss: true, notifSpikeCooldown: 30, notifLossCooldown: 30, notifLossThreshold: 5 }
 let _settingsCache = null
 
 function getSettingsPath() {
@@ -497,6 +497,18 @@ ipcMain.on('update-check-manual', () => {
     writeLog(`manual check failed: ${e.message}\n${e.stack}`)
     sendUpdateStatus({ type: 'error', message: e.message })
   })
+})
+
+ipcMain.on('notify', (_, title, body) => {
+  if (!Notification.isSupported()) return
+  try {
+    const iconPath = app.isPackaged
+      ? path.join(process.resourcesPath, 'assets', 'icon.png')
+      : path.join(__dirname, 'assets', 'icon.png')
+    new Notification({ title, body, icon: iconPath }).show()
+  } catch (e) {
+    console.warn('[notify] failed to show notification:', e.message)
+  }
 })
 
 ipcMain.handle('get-updater-log', () => {

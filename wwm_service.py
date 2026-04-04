@@ -68,6 +68,8 @@ def init_db():
         c.execute("""CREATE TABLE IF NOT EXISTS events(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             ts TEXT,label TEXT,session_id TEXT,ping_ms INTEGER)""")
+        c.execute("""CREATE TABLE IF NOT EXISTS ip_geo(
+            ip TEXT PRIMARY KEY,lat REAL,lon REAL,city TEXT,country TEXT,isp TEXT)""")
         try:
             c.execute("ALTER TABLE pings ADD COLUMN router_ms INTEGER")
             c.execute("ALTER TABLE pings ADD COLUMN dns_ms INTEGER")
@@ -111,6 +113,32 @@ def save_ping(sid,ip,ms,st,j,router_ms=None,dns_ms=None):
             (datetime.now().isoformat(),sid,ip,ms,st,j,router_ms,dns_ms))
         get_db().commit()
 
+def backfill_geo():
+    """Fetch and store geo for any server IPs in the DB that have no entry yet."""
+    try:
+        with _db_lock:
+            all_ips=[r['server_ip'] for r in get_db().execute(
+                "SELECT DISTINCT server_ip FROM pings WHERE server_ip IS NOT NULL").fetchall()]
+            have=set(r['ip'] for r in get_db().execute("SELECT ip FROM ip_geo").fetchall())
+        missing=[ip for ip in all_ips if ip and ip not in have]
+        for ip in missing:
+            try:
+                city,country,isp,lat,lon=get_geo(ip)
+                save_geo(ip,lat,lon,city,country,isp)
+                time.sleep(0.3)
+            except Exception as e:
+                print(f'[geo] backfill {ip}: {e}')
+    except Exception as e:
+        print(f'[geo] backfill error: {e}')
+
+def save_geo(ip,lat,lon,city,country,isp):
+    if not ip or not lat or not lon or abs(lat)<0.01 or abs(lon)<0.01:
+        return
+    with _db_lock:
+        get_db().execute("INSERT OR REPLACE INTO ip_geo VALUES(?,?,?,?,?,?)",
+            (ip,lat,lon,city,country,isp))
+        get_db().commit()
+
 def save_switch(sid,from_ip,to_ip,duration_seconds):
     with _db_lock:
         get_db().execute("INSERT INTO server_switches VALUES(NULL,?,?,?,?,?)",
@@ -126,12 +154,34 @@ def get_sessions():
                 AVG(CASE WHEN ping_ms>0 THEN ping_ms END) as avg,
                 MIN(CASE WHEN ping_ms>0 THEN ping_ms END) as mn,
                 MAX(CASE WHEN ping_ms>0 THEN ping_ms END) as mx,
-                AVG(jitter) as jitter,
+                AVG(CASE WHEN jitter IS NOT NULL THEN jitter END) as jitter,
                 SUM(CASE WHEN status='TIMEOUT' THEN 1 ELSE 0 END) as timeouts,
-                SUM(CASE WHEN jitter > ? THEN 1 ELSE 0 END) as spikes
+                SUM(CASE WHEN jitter > ? THEN 1 ELSE 0 END) as spikes,
+                CAST((julianday(MAX(ts)) - julianday(MIN(ts))) * 86400 AS INTEGER) as duration_seconds
                 FROM pings GROUP BY session_id ORDER BY MIN(id) DESC LIMIT 20""",
                 (SPIKE_THRESH,)).fetchall()
-        return [dict(r) for r in rows]
+            result=[dict(r) for r in rows]
+            # collect all unique IPs across sessions
+            all_ips=set()
+            for r in result:
+                for ip in (r.get('server_ip') or '').split(','):
+                    ip=ip.strip()
+                    if ip: all_ips.add(ip)
+            # fetch stored geo for all IPs in one query
+            geo_map={}
+            if all_ips:
+                ph=','.join('?'*len(all_ips))
+                for g in get_db().execute(f"SELECT ip,lat,lon,city,country FROM ip_geo WHERE ip IN ({ph})",list(all_ips)).fetchall():
+                    geo_map[g['ip']]={'lat':g['lat'],'lon':g['lon'],'city':g['city'],'country':g['country']}
+            # enrich each session row with geo of its first known IP
+            for r in result:
+                ips=[ip.strip() for ip in (r.get('server_ip') or '').split(',') if ip.strip()]
+                for ip in ips:
+                    if ip in geo_map:
+                        r.update({'geo_lat':geo_map[ip]['lat'],'geo_lon':geo_map[ip]['lon'],
+                            'geo_city':geo_map[ip]['city'],'geo_country':geo_map[ip]['country']})
+                        break
+        return result
     except Exception as e:
         print(f'[db] get_sessions: {e}')
         return []
@@ -169,6 +219,7 @@ def get_hourly_stats():
             rows=get_db().execute("""
                 SELECT strftime('%Y-%m-%d %H:00', ts) as hour,
                     AVG(CASE WHEN ping_ms>0 THEN ping_ms END) as avg_ms,
+                    AVG(CASE WHEN jitter IS NOT NULL THEN jitter END) as avg_jitter,
                     COUNT(*) as total,
                     SUM(CASE WHEN status='TIMEOUT' THEN 1 ELSE 0 END) as timeouts
                 FROM pings
@@ -341,6 +392,7 @@ def monitor_loop():
         s['server_ip']=server_ip;s['server_port']=server_port
         s['status']='Fetching location...'
         city,country,isp,lat,lon=get_geo(server_ip)
+        save_geo(server_ip,lat,lon,city,country,isp)
         s.update({'geo_city':city,'geo_country':country,'geo_isp':isp,
             'geo_lat':lat,'geo_lon':lon,
             'count':0,'lost':0,'sum':0,'min':99999,'max':0,
@@ -366,6 +418,7 @@ def monitor_loop():
                     server_ip=nip;server_port=nport
                     s['server_ip']=nip;s['server_port']=nport
                     city,country,isp,lat,lon=get_geo(nip)
+                    save_geo(nip,lat,lon,city,country,isp)
                     s['geo_city']=city;s['geo_country']=country;s['geo_isp']=isp
                     s['geo_lat']=lat;s['geo_lon']=lon
                     ip_connected_since=datetime.now()
@@ -461,6 +514,15 @@ async def handler(ws):
                     CRIT_MS=int(cm)
             if data.get('type')=='get_hourly':
                 await ws.send(json.dumps({'type':'hourly','data':get_hourly_stats()}))
+            if data.get('type')=='clear_data':
+                with _db_lock:
+                    db=get_db()
+                    db.execute("DELETE FROM pings")
+                    db.execute("DELETE FROM events")
+                    db.execute("DELETE FROM server_switches")
+                    db.execute("DELETE FROM ip_geo")
+                    db.commit()
+                await ws.send(json.dumps({'type':'clear_data_ok'}))
             if data.get('type')=='reset_session':
                 s=state
                 if s.get('running') and s.get('server_ip'):
@@ -517,6 +579,7 @@ async def main():
     global CLIENTS
     init_db()
     threading.Thread(target=cleanup_loop, daemon=True).start()
+    threading.Thread(target=backfill_geo, daemon=True).start()
     threading.Thread(target=monitor_loop, daemon=True).start()
     async with websockets.serve(handler,'localhost',7373):
         await broadcaster()
