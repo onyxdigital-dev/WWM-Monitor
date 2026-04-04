@@ -1,11 +1,22 @@
+let _dashRefreshTimer = null
+
+function requestDashData() {
+  if (ws && ws.readyState === 1) {
+    ws.send(JSON.stringify({type:'get_sessions'}));
+    ws.send(JSON.stringify({type:'get_switches'}));
+    ws.send(JSON.stringify({type:'get_hourly'}));
+  }
+}
+
 function switchTab(tab) {
   document.querySelectorAll('.sb-btn').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-'+tab).classList.add('active');
-  if (tab==='dash' && ws && ws.readyState===1) {
-    ws.send(JSON.stringify({type:'get_sessions'}));
-    ws.send(JSON.stringify({type:'get_switches'}));
-    ws.send(JSON.stringify({type:'get_hourly'}));
+  clearInterval(_dashRefreshTimer);
+  _dashRefreshTimer = null;
+  if (tab==='dash') {
+    requestDashData();
+    _dashRefreshTimer = setInterval(requestDashData, 10000);
   }
 }
 
@@ -197,7 +208,7 @@ function setSpikeThreshold_(v, skipSave){
 function setHistorySize_(v, skipSave) {
   document.querySelectorAll('[data-history]').forEach(b => b.classList.toggle('active', +b.dataset.history === v))
   const pl = document.getElementById('ping-history-label')
-  if (pl) pl.textContent = 'PING HISTORY — last ' + v + ' pings'
+  if (pl) pl.textContent = 'PING HISTORY — last ' + v + ''
   const jl = document.getElementById('jitter-history-label')
   if (jl) jl.textContent = 'JITTER HISTORY — last ' + v
   if (!skipSave) saveSetting('historySize', v)
