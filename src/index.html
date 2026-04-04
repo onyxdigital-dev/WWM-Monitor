@@ -68,7 +68,11 @@
             <div class="geo-row"><span class="geo-lbl">SERVER IP</span><span class="geo-val" id="geo-ip">—</span></div>
             <div class="geo-row"><span class="geo-lbl">LOCATION</span><span class="geo-val wrap" id="i-loc">—</span></div>
             <div class="geo-row"><span class="geo-lbl">ISP</span><span class="geo-val wrap" id="geo-isp">—</span></div>
-            <div class="geo-row"><span class="geo-lbl">HOPS</span><span class="geo-val" id="geo-hops">—</span></div>
+            <div class="geo-row" id="hops-row" onclick="toggleHops()" style="cursor:pointer;user-select:none;">
+              <span class="geo-lbl">HOPS</span>
+              <span class="geo-val" id="geo-hops">— <span id="hops-expand-icon" style="font-size:9px;opacity:.5;">▾</span></span>
+            </div>
+            <div id="hops-list" style="display:none;padding:4px 0 4px 8px;"></div>
             <div class="geo-row"><span class="geo-lbl">PROCESS</span><span class="geo-val" id="i-proc">—</span></div>
             <div class="geo-row"><span class="geo-lbl">SESSION</span><span class="geo-val session-dur" id="i-connected-since">—</span></div>
             <span id="i-sess" style="display:none"></span>
