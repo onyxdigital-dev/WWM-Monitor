@@ -181,7 +181,7 @@ function fmtDuration(secs){
 }
 function fmtTs(iso){
   if(!iso)return'—';
-  try{const d=new Date(iso);return d.toLocaleDateString('de-DE')+' '+d.toLocaleTimeString('de-DE');}catch(e){return iso;}
+  try{const d=new Date(iso);return d.toLocaleDateString('en-US')+' '+d.toLocaleTimeString('en-US');}catch(e){return iso;}
 }
 
 function updateSwitches(rows){

@@ -130,7 +130,7 @@ setInterval(() => {
   const diff = Math.floor((Date.now() - connectedSinceTs) / 1000);
   const h = Math.floor(diff / 3600), m = Math.floor(diff % 3600 / 60), s = diff % 60;
   const dur = h > 0 ? `${h}h ${m}m ${s}s` : m > 0 ? `${m}m ${s}s` : `${s}s`;
-  el.textContent = new Date(connectedSinceTs).toLocaleTimeString('de-DE') + '  +' + dur;
+  el.textContent = new Date(connectedSinceTs).toLocaleTimeString('en-US') + '  +' + dur;
 }, 1000);
 
 // ── Live ───────────────────────────────────────────────────────────────────
@@ -276,15 +276,15 @@ function updateLive(d) {
     // Disconnect / Reconnect — no cooldown, fire every transition
     if (_prevRunning !== null) {
       if (_prevRunning && !d.running && cfg.notifDisconnect !== false)
-        window.electronAPI.notify('WWM Monitor — Verbindung verloren', 'Spiel-Server nicht erreichbar');
+        window.electronAPI.notify('WWM Monitor — Connection lost', 'Game server unreachable');
       if (!_prevRunning && d.running && cfg.notifReconnect !== false)
-        window.electronAPI.notify('WWM Monitor — Verbunden', `${loc ? loc + ' · ' : ''}${ms != null ? ms + ' ms' : ''}`);
+        window.electronAPI.notify('WWM Monitor — Connected', `${loc ? loc + ' · ' : ''}${ms != null ? ms + ' ms' : ''}`);
     }
 
     // Server-Switch notification
     if (cfg.notifServerSwitch !== false && _prevServerIp !== null && d.server_ip && d.server_ip !== _prevServerIp) {
       const loc = d.geo_city ? `${d.geo_city}, ${d.geo_country} · ` : '';
-      window.electronAPI.notify('WWM Monitor — Serverwechsel', `${loc}${d.server_ip}`);
+      window.electronAPI.notify('WWM Monitor — Server switch', `${loc}${d.server_ip}`);
     }
 
     // Spike
@@ -302,7 +302,7 @@ function updateLive(d) {
       const cooldownMs = (cfg.notifLossCooldown != null ? cfg.notifLossCooldown : 30) * 1000;
       if (now - _notifLastAt.loss >= cooldownMs) {
         _notifLastAt.loss = now;
-        window.electronAPI.notify('WWM Monitor — Paketverlust', `Loss: ${loss}%${locStr}`);
+        window.electronAPI.notify('WWM Monitor — Packet loss', `Loss: ${loss}%${locStr}`);
       }
     }
   }
@@ -314,19 +314,19 @@ function updateLive(d) {
     const _ms  = ms != null ? ms : '?';
 
     if (_prevRunning !== null && _prevRunning && !d.running && cfg.discordDisconnect)
-      sendDiscordWebhook('\ud83d\udd34 Verbindung verloren', 'WWM Server nicht erreichbar', 15158332);
+      sendDiscordWebhook('\ud83d\udd34 Connection lost', 'WWM server unreachable', 15158332);
 
     if (_prevRunning !== null && !_prevRunning && d.running && cfg.discordReconnect)
-      sendDiscordWebhook('\ud83d\udfe2 Verbunden', (d.geo_city || d.geo_country || '') + ' \u00b7 ' + _ms + ' ms', 3066993);
+      sendDiscordWebhook('\ud83d\udfe2 Connected', (d.geo_city || d.geo_country || '') + ' \u00b7 ' + _ms + ' ms', 3066993);
 
     if (_prevServerIp !== null && d.server_ip && d.server_ip !== _prevServerIp && cfg.discordServerSwitch)
-      sendDiscordWebhook('\ud83d\udd35 Serverwechsel', (d.geo_city || d.server_ip || '?') + (d.server_ip ? ' (' + d.server_ip + ')' : ''), 3447003);
+      sendDiscordWebhook('\ud83d\udd35 Server switch', (d.geo_city || d.server_ip || '?') + (d.server_ip ? ' (' + d.server_ip + ')' : ''), 3447003);
 
     if (d.is_spike && ms != null && cfg.discordSpike) {
       const cooldown = cfg.discordSpikeCooldown ?? 60;
       if (_now - _discordLastAt.spike >= cooldown) {
         _discordLastAt.spike = _now;
-        sendDiscordWebhook('\ud83d\udfe1 Ping Spike', 'Ping: ' + _ms + ' ms' + _loc, 16776960);
+        sendDiscordWebhook('\ud83d\udfe1 Ping spike', 'Ping: ' + _ms + ' ms' + _loc, 16776960);
       }
     }
 
@@ -335,7 +335,7 @@ function updateLive(d) {
       const cooldown  = cfg.discordLossCooldown ?? 60;
       if (loss >= threshold && _now - _discordLastAt.loss >= cooldown) {
         _discordLastAt.loss = _now;
-        sendDiscordWebhook('\ud83d\udd34 Paketverlust', 'Loss: ' + loss + '%' + _loc, 15158332);
+        sendDiscordWebhook('\ud83d\udd34 Packet loss', 'Loss: ' + loss + '%' + _loc, 15158332);
       }
     }
   }

@@ -40,7 +40,7 @@ function drawGraph() {
   ctx.strokeStyle=col;ctx.lineWidth=2;ctx.setLineDash([]);ctx.stroke();
   // X-axis timestamps
   if (graphLatestTs && hist.length > 1) {
-    const fmtT=ts=>new Date(ts).toLocaleTimeString('de-DE');
+    const fmtT=ts=>new Date(ts).toLocaleTimeString('en-US');
     const leftTs=graphLatestTs-(hist.length-1)*pingIntervalMs;
     ctx.font='9px Segoe UI';ctx.fillStyle='rgba(255,255,255,0.28)';ctx.textBaseline='bottom';
     ctx.textAlign='left';  ctx.fillText(fmtT(leftTs),      3, H-1);
@@ -60,7 +60,7 @@ function drawGraph() {
       ctx.fillStyle=col;ctx.fill();
       // tooltip box
       const ts=graphLatestTs?(graphLatestTs-(hist.length-1-graphHoverIdx)*pingIntervalMs):null;
-      const label=`${v} ms${ts?' · '+new Date(ts).toLocaleTimeString('de-DE'):''}`;
+      const label=`${v} ms${ts?' · '+new Date(ts).toLocaleTimeString('en-US'):''}`;
       ctx.font='bold 10px Segoe UI';
       const tw=ctx.measureText(label).width;
       const bw=tw+14, bh=22, bx=Math.min(Math.max(x-bw/2,2),W-bw-2), by=Math.max(y-34,4);
