@@ -3,6 +3,7 @@ app.commandLine.appendSwitch('disable-features', 'AutofillServerCommunication,Au
 const path = require('path')
 const { spawn, execSync } = require('child_process')
 const fs = require('fs')
+const snapLayout = require('./snap-layout')
 
 let win = null
 let tray = null
@@ -12,6 +13,7 @@ let useTray = true
 let isQuitting = false
 let _lastRunning = null
 let _autoPauseTimer = null
+let _maxBtnRect = null
 
 // ─── Simple file logger ───────────────────────────────────────────────────────
 function writeLog(msg) {
@@ -357,6 +359,7 @@ function createWindow() {
     registerOverlayHotkey(cfg.overlayHotkey || SETTINGS_DEFAULTS.overlayHotkey)
     if (!cfg.startMinimized) win.show()
     initUpdater()
+    snapLayout.install(win, () => _maxBtnRect)
   })
 
   win.on('resize', applyRoundedShape)
@@ -422,6 +425,10 @@ ipcMain.on('overlay-close', () => closeOverlay())
 ipcMain.on('toggle-maximize', () => {
   if (!win) return
   if (win.isMaximized()) win.unmaximize(); else win.maximize()
+})
+
+ipcMain.on('maximize-btn-bounds', (_, bounds) => {
+  _maxBtnRect = bounds  // null when mouse leaves button
 })
 ipcMain.on('set-overlay-config', (_, cfg) => {
   if (!overlay || overlay.isDestroyed()) return

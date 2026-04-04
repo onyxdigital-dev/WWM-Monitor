@@ -31,6 +31,21 @@ function switchSettingsTab(name, el) {
 function minimize() { if(window.electronAPI) window.electronAPI.minimize(); }
 function closeApp()  { if(window.electronAPI) window.electronAPI.close(); }
 function toggleMaximize() { if(window.electronAPI) window.electronAPI.send('toggle-maximize'); }
+function onMaximizeBtnEnter(el) {
+  if (!window.electronAPI) return;
+  const r = el.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  // Convert CSS viewport coords → screen pixel coords
+  window.electronAPI.send('maximize-btn-bounds', {
+    x: Math.round((window.screenX + r.left) * dpr),
+    y: Math.round((window.screenY + r.top)  * dpr),
+    w: Math.round(r.width  * dpr),
+    h: Math.round(r.height * dpr),
+  });
+}
+function onMaximizeBtnLeave() {
+  if (window.electronAPI) window.electronAPI.send('maximize-btn-bounds', null);
+}
 
 // ── Auto Updater ─────────────────────────────────────────────────────────────
 let updateDownloaded = false;

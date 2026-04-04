@@ -38,7 +38,8 @@
       <button class="sb-win-btn no-drag" onclick="minimize()" title="Minimize">
         <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><rect x="1" y="4.5" width="8" height="1" fill="currentColor"/></svg>
       </button>
-      <button class="sb-win-btn no-drag" id="maximize-btn" onclick="toggleMaximize()" title="Maximize">
+      <button class="sb-win-btn no-drag" id="maximize-btn" onclick="toggleMaximize()" title="Maximize"
+        onmouseenter="onMaximizeBtnEnter(this)" onmouseleave="onMaximizeBtnLeave()">
         <svg id="maximize-icon" width="10" height="10" viewBox="0 0 10 10" fill="none"><rect x="1.5" y="1.5" width="7" height="7" rx="0.5" stroke="currentColor" stroke-width="1.1" fill="none"/></svg>
       </button>
       <button class="sb-win-btn close no-drag" onclick="closeApp()" title="Close">
