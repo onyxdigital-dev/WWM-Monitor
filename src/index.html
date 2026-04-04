@@ -215,11 +215,6 @@
           </div>
         </div>
 
-        <!-- Event Log -->
-        <div class="card fade-in" style="margin-top:0;">
-          <div style="padding:12px 14px 2px;"><div class="sec-hdr"><div class="sec-bar"></div><div class="sec-title">EVENT LOG</div></div></div>
-          <div id="event-log-list" style="padding:0 14px 12px;max-height:220px;overflow-y:auto;"></div>
-        </div>
 
       </div>
     </div>
@@ -231,6 +226,7 @@
           <div class="tab no-drag" onclick="switchSettingsTab('monitoring',this)">MONITORING</div>
           <div class="tab no-drag" onclick="switchSettingsTab('overlay',this)">OVERLAY</div>
           <div class="tab no-drag" onclick="switchSettingsTab('notifications',this)">NOTIFICATIONS</div>
+          <div class="tab no-drag" onclick="switchSettingsTab('events',this)">EVENTS</div>
           <div class="tab no-drag" onclick="switchSettingsTab('about',this)">ABOUT</div>
         </div>
 
@@ -454,6 +450,12 @@
               style="width:64px;padding:6px 10px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:#fff;font-size:11px;font-family:inherit;text-align:center;"
               oninput="saveSetting('notifLossThreshold',+this.value)" onchange="saveSetting('notifLossThreshold',+this.value)">
           </div>
+        </div>
+
+        <!-- EVENTS -->
+        <div class="tab-content" id="stab-events">
+          <div class="settings-sec-hdr">Event Log</div>
+          <div id="event-log-list" style="max-height:calc(100vh - 180px);overflow-y:auto;padding-bottom:8px;"></div>
         </div>
 
         <!-- ABOUT -->

@@ -6,7 +6,6 @@ function switchTab(tab) {
     ws.send(JSON.stringify({type:'get_sessions'}));
     ws.send(JSON.stringify({type:'get_switches'}));
     ws.send(JSON.stringify({type:'get_hourly'}));
-    ws.send(JSON.stringify({type:'get_events'}));
   }
 }
 
@@ -15,6 +14,7 @@ function switchSettingsTab(name, el) {
   document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
   el.classList.add('active');
   document.getElementById('stab-' + name).classList.add('active');
+  if (name === 'events' && ws && ws.readyState === 1) ws.send(JSON.stringify({type:'get_events'}));
 }
 
 function minimize() { if(window.electronAPI) window.electronAPI.minimize(); }
