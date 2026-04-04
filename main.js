@@ -87,7 +87,7 @@ function sendUpdateStatus(data) {
 }
 
 // ─── Settings ─────────────────────────────────────────────────────────────────
-const SETTINGS_DEFAULTS = { startup: false, startMinimized: false, tray: true, spikeMs: 150, lossPct: 5, pingInterval: 2, warnMs: 80, critMs: 150, overlayHotkey: 'Alt+Shift+O', notificationsEnabled: true, notifSpike: true, notifDisconnect: true, notifReconnect: true, notifLoss: true, notifServerSwitch: true, notifSpikeCooldown: 30, notifLossCooldown: 30, notifLossThreshold: 5, spikeThreshold: 10, overlayOpacity: 100, overlayScale: 1.0, overlayTheme: 'green', autoPauseOverlay: true, historySize: 50, dataRetention: 30 }
+const SETTINGS_DEFAULTS = { startup: false, startMinimized: false, tray: true, spikeMs: 150, lossPct: 5, pingInterval: 2, warnMs: 80, critMs: 150, overlayHotkey: 'Alt+Shift+O', notificationsEnabled: true, notifSpike: true, notifDisconnect: true, notifReconnect: true, notifLoss: true, notifServerSwitch: true, notifSpikeCooldown: 30, notifLossCooldown: 30, notifLossThreshold: 5, spikeThreshold: 10, overlayOpacity: 100, overlayScale: 1.0, overlayTheme: 'green', autoPauseOverlay: true, historySize: 50, dataRetention: 30, discordWebhook: '', discordEnabled: false, discordSpike: true, discordDisconnect: true, discordReconnect: true, discordLoss: true, discordServerSwitch: true, discordSpikeCooldown: 60, discordLossCooldown: 60, discordLossThreshold: 5 }
 let _settingsCache = null
 
 function getSettingsPath() {
