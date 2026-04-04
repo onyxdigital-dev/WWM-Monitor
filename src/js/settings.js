@@ -84,7 +84,7 @@ function toggleOverlay() {
 }
 
 // ── Settings ───────────────────────────────────────────────────────────────
-let cfg={startup:false,startMinimized:false,tray:true,spikeMs:150,lossPct:5,pingInterval:2,warnMs:80,critMs:150,overlayJitter:true,overlayLoss:true,overlaySparkline:true,notificationsEnabled:true,notifSpike:true,notifDisconnect:true,notifReconnect:true,notifLoss:true,notifSpikeCooldown:30,notifLossCooldown:30,notifLossThreshold:5};
+let cfg={startup:false,startMinimized:false,tray:true,spikeMs:150,lossPct:5,pingInterval:2,warnMs:80,critMs:150,overlayJitter:true,overlayLoss:true,overlaySparkline:true,notificationsEnabled:true,notifSpike:true,notifDisconnect:true,notifReconnect:true,notifLoss:true,notifServerSwitch:true,notifSpikeCooldown:30,notifLossCooldown:30,notifLossThreshold:5};
 
 function applySettingsToUI(){
   document.getElementById('s-startup').checked=cfg.startup||false;
@@ -108,6 +108,8 @@ function applySettingsToUI(){
   if (nr) nr.checked = cfg.notifReconnect !== false;
   const nl = document.getElementById('s-notif-loss');
   if (nl) nl.checked = cfg.notifLoss !== false;
+  const nsw = document.getElementById('s-notif-server-switch');
+  if (nsw) nsw.checked = cfg.notifServerSwitch !== false;
   const sc = document.getElementById('s-notif-spike-cd');
   if (sc) sc.value = cfg.notifSpikeCooldown != null ? cfg.notifSpikeCooldown : 30;
   const lc = document.getElementById('s-notif-loss-cd');
