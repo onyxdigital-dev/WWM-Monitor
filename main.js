@@ -235,40 +235,7 @@ function closeOverlay() {
   }
 }
 
-// ─── Shape ────────────────────────────────────────────────────────────────────
-function buildRoundedShape(w, h, r) {
-  const rects = [
-    { x: r, y: 0, width: w - 2*r, height: h },
-    { x: 0, y: r, width: w,       height: h - 2*r },
-  ]
-  const steps = 20
-  for (let i = 0; i < steps; i++) {
-    const a1 = (i / steps) * (Math.PI / 2)
-    const a2 = ((i+1) / steps) * (Math.PI / 2)
-    const ox = r - Math.round(r * Math.cos(a1))
-    const oy = r - Math.round(r * Math.sin(a2))
-    const sw = r - ox
-    if (sw < 1) continue
-    rects.push({ x: ox,       y: oy,       width: sw, height: 1 })
-    rects.push({ x: w-ox-sw,  y: oy,       width: sw, height: 1 })
-    rects.push({ x: ox,       y: h-oy-1,   width: sw, height: 1 })
-    rects.push({ x: w-ox-sw,  y: h-oy-1,   width: sw, height: 1 })
-  }
-  return rects
-}
-
-let _shapeDebounce = null
-function applyRoundedShape() {
-  if (!win) return
-  if (win.isMaximized()) return
-  clearTimeout(_shapeDebounce)
-  _shapeDebounce = setTimeout(() => {
-    try {
-      const [w, h] = win.getSize()
-      win.setShape(buildRoundedShape(w, h, 14))
-    } catch(e) {}
-  }, 80)
-}
+function applyRoundedShape() {} // no-op: native roundedCorners handles this
 
 // ─── Tray icon color by ping status ──────────────────────────────────────────
 const _STATUS_COLORS = {
@@ -367,7 +334,7 @@ function createWindow() {
     frame: false,
     transparent: true,
     backgroundColor: '#00000000',
-    roundedCorners: false,
+    roundedCorners: true,
     shadow: false,
     show: false,
     icon: iconPath,
