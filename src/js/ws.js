@@ -5,6 +5,7 @@ let _prevServerIp = null;
 let WARN=80, CRIT=150;
 let _chartPeriod = '24h';
 let _lastDailyData = [];
+let _hopsExpanded = false;
 
 function connect() {
   ws = new WebSocket('ws://localhost:7373');
@@ -80,6 +81,24 @@ function onSessionReset() {
   if(ws&&ws.readyState===1){ws.send(JSON.stringify({type:'get_sessions'}));ws.send(JSON.stringify({type:'get_switches'}));}
 }
 
+// ── Traceroute hops expand/collapse ────────────────────────────────────────
+function toggleHops() {
+  _hopsExpanded = !_hopsExpanded
+  const list = document.getElementById('hops-list')
+  const icon = document.getElementById('hops-expand-icon')
+  if (list) list.style.display = _hopsExpanded ? 'block' : 'none'
+  if (icon) icon.textContent = _hopsExpanded ? '▴' : '▾'
+  if (_hopsExpanded) renderHopsList(window._currentHops || [])
+}
+
+function renderHopsList(hops) {
+  const list = document.getElementById('hops-list')
+  if (!list) return
+  list.innerHTML = hops.map((ip, i) =>
+    '<div class="hop-row"><span class="hop-num">' + (i+1) + '</span><span class="hop-ip">' + ip + '</span></div>'
+  ).join('')
+}
+
 // ── connected_since Timer (#4) ─────────────────────────────────────────────
 // Stored once from WS state, ticked independently every second
 let connectedSinceTs = null;
@@ -136,8 +155,13 @@ function updateLive(d) {
     document.getElementById('provider-health-pct').textContent=Math.round(health)+'%';
   }
 
-  if (d.hops && d.hops.length)
-    document.getElementById('geo-hops').textContent=d.hops.length+' hops';
+  if (d.hops && d.hops.length) {
+    window._currentHops = d.hops
+    const icon = _hopsExpanded ? '▴' : '▾'
+    const hopsEl = document.getElementById('geo-hops')
+    if (hopsEl) hopsEl.innerHTML = d.hops.length + ' hops <span id="hops-expand-icon" style="font-size:9px;opacity:.5;">' + icon + '</span>'
+    if (_hopsExpanded) renderHopsList(d.hops)
+  }
 
   const pn=document.getElementById('ping-num');
   const pill=document.getElementById('status-pill');
