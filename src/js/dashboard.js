@@ -247,10 +247,7 @@ function downloadCSV(csvStr){
   document.body.removeChild(a);URL.revokeObjectURL(url);
 }
 
-let _pendingSessionId = null;
-
 function openSessionDetail(sessionId) {
-  _pendingSessionId = sessionId;
   if (ws && ws.readyState === 1) ws.send(JSON.stringify({type:'get_session_pings', session_id: sessionId}));
 }
 
@@ -283,13 +280,13 @@ function renderSessionModal(sessRow, pings) {
     <div class="stat-tile"><div class="stat-val" style="color:var(--yellow)">${jitter || '—'}</div><div class="stat-lbl">JITTER</div></div>
     <div class="stat-tile"><div class="stat-val" style="color:var(--purple)">${sessRow.spikes != null ? sessRow.spikes : '—'}</div><div class="stat-lbl">SPIKES</div></div>
   `;
+  modal.className = 'modal-visible';
   requestAnimationFrame(() => {
     const pingVals = pings.map(p => p.ping_ms > 0 ? p.ping_ms : null);
     const jitterVals = pings.map(p => p.jitter != null ? p.jitter : null);
     drawModalGraph(document.getElementById('modal-ping-canvas'), pingVals, WARN, CRIT);
     drawModalGraph(document.getElementById('modal-jitter-canvas'), jitterVals, 10, 20);
   });
-  modal.className = 'modal-visible';
 }
 
 function drawModalGraph(canvas, vals, warnV, critV) {
