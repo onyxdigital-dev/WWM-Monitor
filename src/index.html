@@ -25,6 +25,19 @@
       <button class="sb-btn" data-tab="settings" onclick="switchTab('settings')" title="Settings">
         <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor"><path d="M8.43 2.76a1.75 1.75 0 013.14 0l.24.5a1.75 1.75 0 002.36.8l.5-.24a1.75 1.75 0 012.22 2.22l-.24.5a1.75 1.75 0 00.8 2.36l.5.24a1.75 1.75 0 010 3.14l-.5.24a1.75 1.75 0 00-.8 2.36l.24.5a1.75 1.75 0 01-2.22 2.22l-.5-.24a1.75 1.75 0 00-2.36.8l-.24.5a1.75 1.75 0 01-3.14 0l-.24-.5a1.75 1.75 0 00-2.36-.8l-.5.24a1.75 1.75 0 01-2.22-2.22l.24-.5a1.75 1.75 0 00-.8-2.36l-.5-.24a1.75 1.75 0 010-3.14l.5-.24a1.75 1.75 0 00.8-2.36l-.24-.5a1.75 1.75 0 012.22-2.22l.5.24a1.75 1.75 0 002.36-.8l.24-.5zM10 12.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z"/></svg>
       </button>
+      <button class="sb-btn" data-tab="heatmap" onclick="switchTab('heatmap')" title="Heatmap">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5">
+          <rect x="1" y="1" width="4" height="4" rx="1"/>
+          <rect x="7" y="1" width="4" height="4" rx="1"/>
+          <rect x="13" y="1" width="4" height="4" rx="1"/>
+          <rect x="1" y="7" width="4" height="4" rx="1"/>
+          <rect x="7" y="7" width="4" height="4" rx="1"/>
+          <rect x="13" y="7" width="4" height="4" rx="1"/>
+          <rect x="1" y="13" width="4" height="4" rx="1"/>
+          <rect x="7" y="13" width="4" height="4" rx="1"/>
+          <rect x="13" y="13" width="4" height="4" rx="1"/>
+        </svg>
+      </button>
     </nav>
     <div id="sb-bottom">
       <div class="status-dot" id="status-dot"></div>
@@ -529,6 +542,23 @@
         </div>
       </div>
 
+      <div class="page" id="page-heatmap">
+        <div class="scrollable">
+          <div class="card fade-in">
+            <div class="sec-hdr">Ping Heatmap</div>
+            <div style="padding:12px 12px 4px;">
+              <canvas id="heatmap-canvas" style="display:block;"></canvas>
+            </div>
+            <div id="heatmap-legend" style="display:flex;align-items:center;gap:6px;padding:4px 16px 12px;font-size:10px;color:rgba(255,255,255,.4);">
+              <span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:#22c55e;"></span> Gut
+              <span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:#f59e0b;margin-left:6px;"></span> Erh&ouml;ht
+              <span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:#ef4444;margin-left:6px;"></span> Kritisch
+              <span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:rgba(255,255,255,0.06);margin-left:6px;"></span> Keine Daten
+            </div>
+          </div>
+        </div>
+      </div>
+
   </div><!-- #pages -->
   </div><!-- #main -->
 
@@ -560,6 +590,7 @@
 <script src="js/charts.js"></script>
 <script src="js/maps.js"></script>
 <script src="js/dashboard.js"></script>
+<script src="js/heatmap.js"></script>
 <script>
 window.addEventListener('load',()=>{
   loadWorldMap();
