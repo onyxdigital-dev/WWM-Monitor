@@ -206,7 +206,15 @@ function createOverlay() {
     }
   })
   overlay.loadFile(path.join(__dirname, 'src', 'overlay.html'))
-  overlay.once('ready-to-show', () => overlay.show())
+  overlay.once('ready-to-show', () => {
+    overlay.show()
+    const startCfg = loadSettings()
+    overlay.webContents.send('overlay:config', {
+      theme: startCfg.overlayTheme || 'green',
+      scale: startCfg.overlayScale || 1.0,
+    })
+    overlay.setOpacity((startCfg.overlayOpacity ?? 100) / 100)
+  })
   overlay.setAlwaysOnTop(true, 'screen-saver')
   overlay.on('moved', () => {
     const [x, y] = overlay.getPosition()
@@ -437,6 +445,17 @@ ipcMain.on('set-startup', (_, enable) => {
 
 ipcMain.on('overlay-open',  () => createOverlay())
 ipcMain.on('overlay-close', () => closeOverlay())
+ipcMain.on('set-overlay-config', (_, cfg) => {
+  if (!overlay || overlay.isDestroyed()) return
+  if (cfg.opacity != null) overlay.setOpacity(cfg.opacity / 100)
+  overlay.webContents.send('overlay:config', cfg)
+  const current = loadSettings()
+  const updates = {}
+  if (cfg.opacity != null) updates.overlayOpacity = cfg.opacity
+  if (cfg.scale   != null) updates.overlayScale   = cfg.scale
+  if (cfg.theme   != null) updates.overlayTheme   = cfg.theme
+  saveSettings({ ...current, ...updates })
+})
 ipcMain.on('set-overlay-hotkey', (_, hotkey) => {
   const cfg = loadSettings()
   saveSettings({ ...cfg, overlayHotkey: hotkey })
