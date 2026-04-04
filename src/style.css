@@ -317,3 +317,8 @@ tbody td:first-child { color:var(--text); font-family:'Consolas',monospace; font
   border-radius:8px; padding:4px 10px;
   font-size:13px; font-weight:700; color:var(--green);
 }
+.ev-row { display:flex; align-items:center; gap:10px; padding:6px 0; border-bottom:1px solid rgba(255,255,255,.05); font-size:11px; }
+.ev-row:last-child { border-bottom:none; }
+.ev-time { color:var(--muted); white-space:nowrap; min-width:120px; }
+.ev-badge { padding:2px 7px; border-radius:4px; font-size:10px; font-weight:700; letter-spacing:.04em; white-space:nowrap; }
+.ev-sid { color:var(--muted); font-size:10px; }

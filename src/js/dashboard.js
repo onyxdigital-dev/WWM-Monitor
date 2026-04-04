@@ -202,6 +202,35 @@ function updateSwitches(rows){
   });
 }
 
+function updateEvents(data){
+  const el=document.getElementById('event-log-list');
+  if(!el)return;
+  el.innerHTML='';
+  if(!data||!data.length){
+    el.innerHTML='<div style="text-align:center;color:var(--muted);padding:20px;font-size:11px;">No events recorded yet.</div>';
+    return;
+  }
+  data.forEach(r=>{
+    const labelColors={
+      'DISCONNECT':   '#ef4444',
+      'RECONNECT':    '#22c55e',
+      'SERVER_SWITCH':'#3b82f6',
+    };
+    const col=labelColors[r.label]||'rgba(255,255,255,.5)';
+    const div=document.createElement('div');
+    div.className='ev-row';
+    const time=(fmtTs(r.ts)||'').split(' ')[1]||'—';
+    const date=(fmtTs(r.ts)||'').split(' ')[0]||'—';
+    const extra=r.ping_ms!=null&&r.ping_ms>0?` · ${r.ping_ms} ms`:'';
+    div.innerHTML=`
+      <div class="ev-time">${date} ${time}</div>
+      <div class="ev-badge" style="color:${col};background:${col}1a;border:1px solid ${col}33;">${r.label.replace('_',' ')}</div>
+      <div class="ev-sid">${(r.session_id||'').slice(-8)}${extra}</div>
+    `;
+    el.appendChild(div);
+  });
+}
+
 // ── CSV Export ─────────────────────────────────────────────────────────────
 function exportCSV(){
   if(!ws||ws.readyState!==1)return;

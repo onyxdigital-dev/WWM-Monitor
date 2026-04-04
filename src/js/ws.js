@@ -14,6 +14,7 @@ function connect() {
       if(ws&&ws.readyState===1){
         ws.send(JSON.stringify({type:'get_sessions'}));
         ws.send(JSON.stringify({type:'get_switches'}));
+        ws.send(JSON.stringify({type:'get_events'}));
       }
     }, 3000);
   };
@@ -31,6 +32,7 @@ function connect() {
       if(ws&&ws.readyState===1){ws.send(JSON.stringify({type:'get_sessions'}));ws.send(JSON.stringify({type:'get_switches'}));}
     }
     if (msg.type==='hourly')       { drawHourly(msg.data); drawHourlyJitter(msg.data); }
+    if (msg.type==='events')       updateEvents(msg.data);
   };
 }
 

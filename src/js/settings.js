@@ -6,6 +6,7 @@ function switchTab(tab) {
     ws.send(JSON.stringify({type:'get_sessions'}));
     ws.send(JSON.stringify({type:'get_switches'}));
     ws.send(JSON.stringify({type:'get_hourly'}));
+    ws.send(JSON.stringify({type:'get_events'}));
   }
 }
 

@@ -145,6 +145,26 @@ def save_switch(sid,from_ip,to_ip,duration_seconds):
             (datetime.now().isoformat(),from_ip,to_ip,duration_seconds,sid))
         get_db().commit()
 
+def save_event(label,session_id,ping_ms=None):
+    try:
+        with _db_lock:
+            get_db().execute("INSERT INTO events VALUES(NULL,?,?,?,?)",
+                (datetime.now().isoformat(),label,session_id,ping_ms))
+            get_db().commit()
+    except Exception as e:
+        print(f'[db] save_event: {e}')
+
+def get_events():
+    try:
+        with _db_lock:
+            rows=get_db().execute(
+                "SELECT id,ts,label,session_id,ping_ms FROM events ORDER BY id DESC LIMIT 50"
+            ).fetchall()
+        return [dict(r) for r in rows]
+    except Exception as e:
+        print(f'[db] get_events: {e}')
+        return []
+
 def get_sessions():
     try:
         with _db_lock:
@@ -401,6 +421,7 @@ def monitor_loop():
             'last_ms':None,'prev_ms':None,'router_ms':None,'dns_ms':None,
             'last_spike':None,'running':True,'hops':[],'hop_changed':False})
         sid=datetime.now().strftime('%Y%m%d_%H%M%S');s['session_id']=sid
+        save_event('RECONNECT',sid)
         s['connected_since']=datetime.now().isoformat()
         ip_connected_since=datetime.now()
         def do_tracert():
@@ -408,12 +429,15 @@ def monitor_loop():
             s['hops']=h
         threading.Thread(target=do_tracert,daemon=True).start()
         while True:
-            if not find_game()[0]:break
+            if not find_game()[0]:
+                save_event('DISCONNECT',sid)
+                break
             if s['count']>0 and s['count']%10==0:
                 nip,nport=find_server_ip(pid)
                 if nip and nip!=server_ip:
                     duration=int((datetime.now()-ip_connected_since).total_seconds())
                     save_switch(sid,server_ip,nip,duration)
+                    save_event('SERVER_SWITCH',sid)
                     old_hops=list(s['hops'])
                     server_ip=nip;server_port=nport
                     s['server_ip']=nip;s['server_port']=nport
@@ -517,6 +541,8 @@ async def handler(ws):
                     SPIKE_THRESH=int(st)
             if data.get('type')=='get_hourly':
                 await ws.send(json.dumps({'type':'hourly','data':get_hourly_stats()}))
+            if data.get('type')=='get_events':
+                await ws.send(json.dumps({'type':'events','data':get_events()}))
             if data.get('type')=='clear_data':
                 with _db_lock:
                     db=get_db()
