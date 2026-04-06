@@ -249,9 +249,10 @@ tbody td:first-child { color:var(--text); font-family:'Consolas',monospace; font
 .ping-ok   { color:white!important;   text-shadow:0 0 30px rgba(255,255,255,.2)!important; }
 .ping-warn { color:#f59e0b!important;  text-shadow:0 0 30px rgba(245,158,11,.4)!important; }
 .ping-crit { color:#ef4444!important;  text-shadow:0 0 30px rgba(239,68,68,.5)!important; }
-.orb { position:fixed; border-radius:50%; filter:blur(80px); pointer-events:none; z-index:-1; opacity:.18; }
-.orb1 { width:400px; height:400px; background:rgba(255,255,255,.06); top:-120px; left:-80px; }
-.orb2 { width:300px; height:300px; background:rgba(255,255,255,.04); bottom:0; right:80px; }
+.orb { position:fixed; border-radius:50%; filter:blur(80px); pointer-events:none; z-index:-1; }
+.orb1 { width:400px; height:400px; background:rgba(255,255,255,.06); top:-120px; left:-80px; opacity:0.45; }
+.orb2 { width:300px; height:300px; background:rgba(255,255,255,.04); bottom:0; right:80px; opacity:0.40; }
+.orb3 { width:200px; height:200px; background:rgba(255,255,255,.035); filter:blur(60px); top:35%; left:38%; opacity:0.28; }
 @keyframes fadeIn { from{opacity:0;transform:translateY(5px)} to{opacity:1;transform:none} }
 .fade-in { animation:fadeIn .3s ease forwards; }
 .update-btn {
