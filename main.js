@@ -199,6 +199,7 @@ function createOverlay() {
     skipTaskbar: true,
     resizable: false,
     movable: true,
+    hasShadow: false,
     show: false,
     webPreferences: {
       preload: path.join(__dirname, 'overlay-preload.js'),
