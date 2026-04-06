@@ -1,10 +1,10 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
-  --bg: #080808; --glass: rgba(255,255,255,0.055); --glass-hi: rgba(255,255,255,0.10);
+  --bg: #080808; --glass: rgba(255,255,255,0.07); --glass-hi: rgba(255,255,255,0.10);
   --border: rgba(255,255,255,0.09); --border-hi: rgba(255,255,255,0.22);
   --text: #f0f0f0; --muted: rgba(255,255,255,0.35); --muted2: rgba(255,255,255,0.55);
   --green: #22c55e; --yellow: #f59e0b; --red: #ef4444; --purple: #a855f7;
-  --radius: 18px; --blur: 20px;
+  --radius: 18px; --blur: 24px;
 }
 html { width:100%; height:100%; background:transparent !important; overflow:hidden; -webkit-app-region:drag; user-select:none; }
 body { width:100%; height:100%; background:transparent !important; overflow:hidden; margin:0; padding:0; }
