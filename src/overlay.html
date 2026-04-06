@@ -48,7 +48,7 @@ html, body {
 .metric-val { font-size:13px; font-weight:800; color:rgba(255,255,255,0.8); line-height:1; transition:color .3s; }
 .metric-label { font-size:7px; font-weight:700; letter-spacing:.08em; color:rgba(255,255,255,.28); }
 #spark { display:flex; align-items:flex-end; gap:2px; height:22px; }
-.spark-bar { width:3px; border-radius:2px 2px 0 0; flex-shrink:0; transition:height .2s, background .2s; }
+.spark-bar { width:3px; border-radius:1px 1px 0 0; flex-shrink:0; transition:height .2s, background .2s; }
 #close {
   position:absolute; top:5px; right:7px;
   font-size:10px; color:rgba(255,255,255,.25);
@@ -153,19 +153,24 @@ window.overlayAPI.onPingUpdate((data) => {
   const hist = data.history || [];
   const valid = hist.filter(v => v != null);
   const maxMs = valid.length ? Math.max(...valid) : 1;
+  const minMs = valid.length ? Math.min(...valid) : 0;
+  const range = Math.max(maxMs - minMs, 10);
+  const SPARK_H = 22;
   for (let i = 0; i < 10; i++) {
     const bar = document.getElementById('sb' + i);
     if (i >= hist.length) {
       bar.style.visibility = 'hidden';
+      bar.style.height = '2px';
       continue;
     }
     bar.style.visibility = '';
     const v = hist[i];
     if (v === null) {
-      bar.style.height = '15%';
+      bar.style.height = '2px';
       bar.style.background = 'rgba(255,255,255,0.2)';
     } else {
-      bar.style.height = Math.max(15, Math.round(v / maxMs * 100)) + '%';
+      const px = Math.max(2, Math.round(((v - minMs) / range) * (SPARK_H - 4) + 4));
+      bar.style.height = px + 'px';
       bar.style.background = pingColor(v);
     }
   }
