@@ -15,14 +15,22 @@ html, body {
 #wrap {
   width:310px; height:60px;
   background:rgba(8,8,8,0.78);
-  backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
+  backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px);
   border-radius:12px;
-  border:1px solid rgba(255,255,255,0.10);
-  box-shadow:0 4px 24px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.07);
+  border:1px solid rgba(255,255,255,0.12);
+  box-shadow:
+    0 4px 24px rgba(0,0,0,0.6),
+    inset 0 1px 0 rgba(255,255,255,0.18),
+    inset 0 -1px 0 rgba(0,0,0,0.22);
   display:flex; align-items:center; gap:10px;
   padding:0 14px;
   position:relative;
   overflow:hidden;
+}
+#wrap::before {
+  content:''; position:absolute; top:0; left:8%; right:8%; height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,0.40),transparent);
+  pointer-events:none;
 }
 #accent {
   position:absolute; left:0; top:0; bottom:0; width:3px;
