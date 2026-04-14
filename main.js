@@ -3,13 +3,14 @@ app.commandLine.appendSwitch('disable-features', 'AutofillServerCommunication,Au
 const path = require('path')
 const { spawn, execSync } = require('child_process')
 const fs = require('fs')
-
 let win = null
 let tray = null
 let backend = null
 let overlay = null
 let useTray = true
 let isQuitting = false
+let _lastRunning = null
+let _autoPauseTimer = null
 
 // ─── Simple file logger ───────────────────────────────────────────────────────
 function writeLog(msg) {
@@ -85,7 +86,7 @@ function sendUpdateStatus(data) {
 }
 
 // ─── Settings ─────────────────────────────────────────────────────────────────
-const SETTINGS_DEFAULTS = { startup: false, startMinimized: false, tray: true, spikeMs: 150, lossPct: 5, pingInterval: 2, warnMs: 80, critMs: 150, overlayHotkey: 'Alt+Shift+O', notificationsEnabled: true, notifSpike: true, notifDisconnect: true, notifReconnect: true, notifLoss: true, notifSpikeCooldown: 30, notifLossCooldown: 30, notifLossThreshold: 5 }
+const SETTINGS_DEFAULTS = { startup: false, startMinimized: false, tray: true, spikeMs: 150, lossPct: 5, pingInterval: 2, warnMs: 80, critMs: 150, overlayHotkey: 'Alt+Shift+O', notificationsEnabled: true, notifSpike: true, notifDisconnect: true, notifReconnect: true, notifLoss: true, notifServerSwitch: true, notifSpikeCooldown: 30, notifLossCooldown: 30, notifLossThreshold: 5, spikeThreshold: 10, overlayOpacity: 100, overlayScale: 1.0, overlayTheme: 'green', autoPauseOverlay: true, historySize: 50, dataRetention: 30, discordWebhook: '', discordEnabled: false, discordSpike: true, discordDisconnect: true, discordReconnect: true, discordLoss: true, discordServerSwitch: true, discordSpikeCooldown: 60, discordLossCooldown: 60, discordLossThreshold: 5 }
 let _settingsCache = null
 
 function getSettingsPath() {
@@ -198,6 +199,7 @@ function createOverlay() {
     skipTaskbar: true,
     resizable: false,
     movable: true,
+    hasShadow: false,
     show: false,
     webPreferences: {
       preload: path.join(__dirname, 'overlay-preload.js'),
@@ -206,7 +208,17 @@ function createOverlay() {
     }
   })
   overlay.loadFile(path.join(__dirname, 'src', 'overlay.html'))
-  overlay.once('ready-to-show', () => overlay.show())
+  overlay.once('ready-to-show', () => {
+    overlay.show()
+    const startCfg = loadSettings()
+    const scale = startCfg.overlayScale || 1.0
+    overlay.setSize(Math.round(310 * scale), Math.round(60 * scale))
+    overlay.webContents.send('overlay:config', {
+      theme: startCfg.overlayTheme || 'green',
+      scale,
+    })
+    overlay.setOpacity((startCfg.overlayOpacity ?? 100) / 100)
+  })
   overlay.setAlwaysOnTop(true, 'screen-saver')
   overlay.on('moved', () => {
     const [x, y] = overlay.getPosition()
@@ -223,40 +235,7 @@ function closeOverlay() {
   }
 }
 
-// ─── Shape ────────────────────────────────────────────────────────────────────
-function buildRoundedShape(w, h, r) {
-  const rects = [
-    { x: r, y: 0, width: w - 2*r, height: h },
-    { x: 0, y: r, width: w,       height: h - 2*r },
-  ]
-  const steps = 20
-  for (let i = 0; i < steps; i++) {
-    const a1 = (i / steps) * (Math.PI / 2)
-    const a2 = ((i+1) / steps) * (Math.PI / 2)
-    const ox = r - Math.round(r * Math.cos(a1))
-    const oy = r - Math.round(r * Math.sin(a2))
-    const sw = r - ox
-    if (sw < 1) continue
-    rects.push({ x: ox,       y: oy,       width: sw, height: 1 })
-    rects.push({ x: w-ox-sw,  y: oy,       width: sw, height: 1 })
-    rects.push({ x: ox,       y: h-oy-1,   width: sw, height: 1 })
-    rects.push({ x: w-ox-sw,  y: h-oy-1,   width: sw, height: 1 })
-  }
-  return rects
-}
-
-let _shapeDebounce = null
-function applyRoundedShape() {
-  if (!win) return
-  if (win.isMaximized()) return
-  clearTimeout(_shapeDebounce)
-  _shapeDebounce = setTimeout(() => {
-    try {
-      const [w, h] = win.getSize()
-      win.setShape(buildRoundedShape(w, h, 14))
-    } catch(e) {}
-  }, 16)
-}
+function applyRoundedShape() {} // no-op: native roundedCorners handles this
 
 // ─── Tray icon color by ping status ──────────────────────────────────────────
 const _STATUS_COLORS = {
@@ -322,13 +301,13 @@ function buildTrayMenu() {
   return Menu.buildFromTemplate([
     { label: 'WWM Monitor', enabled: false },
     { type: 'separator' },
-    { label: 'Anzeigen',   click: () => { if (win) { win.show(); win.focus(); applyRoundedShape() } } },
-    { label: 'Verstecken', click: () => { if (win) win.hide() } },
+    { label: 'Show',   click: () => { if (win) { win.show(); win.focus(); applyRoundedShape() } } },
+    { label: 'Hide', click: () => { if (win) win.hide() } },
     { type: 'separator' },
-    { label: 'Overlay anzeigen',  click: () => createOverlay() },
-    { label: 'Overlay schließen', click: () => closeOverlay() },
+    { label: 'Show Overlay',  click: () => createOverlay() },
+    { label: 'Close Overlay', click: () => closeOverlay() },
     { type: 'separator' },
-    { label: 'Beenden', click: () => { shutdown(); app.exit(0) } }
+    { label: 'Quit', click: () => { shutdown(); app.exit(0) } }
   ])
 }
 
@@ -355,7 +334,7 @@ function createWindow() {
     frame: false,
     transparent: true,
     backgroundColor: '#00000000',
-    roundedCorners: false,
+    roundedCorners: true,
     shadow: false,
     show: false,
     icon: iconPath,
@@ -382,6 +361,8 @@ function createWindow() {
 
   win.on('resize', applyRoundedShape)
   win.on('unmaximize', applyRoundedShape)
+  win.on('maximize',   () => { if (win && !win.isDestroyed()) win.webContents.send('window-state', { maximized: true }) })
+  win.on('unmaximize', () => { if (win && !win.isDestroyed()) win.webContents.send('window-state', { maximized: false }) })
 
   win.on('close', (e) => {
     if (isQuitting) return
@@ -437,6 +418,23 @@ ipcMain.on('set-startup', (_, enable) => {
 
 ipcMain.on('overlay-open',  () => createOverlay())
 ipcMain.on('overlay-close', () => closeOverlay())
+
+ipcMain.on('toggle-maximize', () => {
+  if (!win) return
+  if (win.isMaximized()) win.unmaximize(); else win.maximize()
+})
+ipcMain.on('set-overlay-config', (_, cfg) => {
+  if (!overlay || overlay.isDestroyed()) return
+  if (cfg.opacity != null) overlay.setOpacity(cfg.opacity / 100)
+  if (cfg.scale   != null) overlay.setSize(Math.round(310 * cfg.scale), Math.round(60 * cfg.scale))
+  overlay.webContents.send('overlay:config', cfg)
+  const current = loadSettings()
+  const updates = {}
+  if (cfg.opacity != null) updates.overlayOpacity = cfg.opacity
+  if (cfg.scale   != null) updates.overlayScale   = cfg.scale
+  if (cfg.theme   != null) updates.overlayTheme   = cfg.theme
+  saveSettings({ ...current, ...updates })
+})
 ipcMain.on('set-overlay-hotkey', (_, hotkey) => {
   const cfg = loadSettings()
   saveSettings({ ...cfg, overlayHotkey: hotkey })
@@ -449,8 +447,34 @@ ipcMain.on('ping-data', (_, data) => {
     const label = data.ms != null ? `${data.ms} ms` : 'timeout'
     win.setTitle(`WWM Monitor — ${label}`)
   }
+  if (tray && !tray.isDestroyed()) {
+    if (data.running === false) {
+      tray.setToolTip('WWM Monitor · waiting')
+    } else if (data.ms != null) {
+      tray.setToolTip(`WWM Monitor · ${data.ms} ms`)
+    } else {
+      tray.setToolTip('WWM Monitor · timeout')
+    }
+  }
   if (overlay && !overlay.isDestroyed()) {
     overlay.webContents.send('ping-update', data)
+  }
+  // Auto-pause overlay
+  const autoCfg = loadSettings()
+  if (autoCfg.autoPauseOverlay) {
+    const running = data.running !== false && data.status !== 'waiting'
+    if (!running && _lastRunning === true) {
+      if (!_autoPauseTimer) {
+        _autoPauseTimer = setTimeout(() => {
+          _autoPauseTimer = null
+          if (overlay && !overlay.isDestroyed()) overlay.hide()
+        }, 10000)
+      }
+    } else if (running && _lastRunning === false) {
+      if (_autoPauseTimer) { clearTimeout(_autoPauseTimer); _autoPauseTimer = null }
+      if (overlay && !overlay.isDestroyed()) overlay.show()
+    }
+    _lastRunning = running
   }
 })
 
@@ -484,7 +508,7 @@ ipcMain.on('update-install-now', () => {
 
 ipcMain.on('update-check-manual', () => {
   if (!autoUpdater) {
-    sendUpdateStatus({ type: 'error', message: 'Updater nicht verfügbar' })
+    sendUpdateStatus({ type: 'error', message: 'Updater not available' })
     return
   }
   if (!app.isPackaged) {
@@ -514,8 +538,8 @@ ipcMain.on('notify', (_, title, body) => {
 ipcMain.handle('get-updater-log', () => {
   try {
     const logPath = path.join(app.getPath('userData'), 'updater.log')
-    return fs.existsSync(logPath) ? fs.readFileSync(logPath, 'utf-8') : 'Keine Log-Einträge.'
+    return fs.existsSync(logPath) ? fs.readFileSync(logPath, 'utf-8') : 'No log entries.'
   } catch(e) {
-    return 'Fehler beim Lesen des Logs: ' + e.message
+    return 'Error reading log: ' + e.message
   }
 })

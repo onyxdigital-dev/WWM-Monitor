@@ -75,6 +75,11 @@ def init_db():
             c.execute("ALTER TABLE pings ADD COLUMN dns_ms INTEGER")
         except Exception as e:
             print(f'[db] migrate: {e}')
+        c.execute("""CREATE TABLE IF NOT EXISTS session_notes (
+            session_id TEXT PRIMARY KEY,
+            note TEXT,
+            updated_at TEXT
+        )""")
         # Performance-Indizes
         c.execute("CREATE INDEX IF NOT EXISTS idx_pings_ts         ON pings(ts)")
         c.execute("CREATE INDEX IF NOT EXISTS idx_pings_session_id ON pings(session_id)")
@@ -144,6 +149,38 @@ def save_switch(sid,from_ip,to_ip,duration_seconds):
         get_db().execute("INSERT INTO server_switches VALUES(NULL,?,?,?,?,?)",
             (datetime.now().isoformat(),from_ip,to_ip,duration_seconds,sid))
         get_db().commit()
+
+def save_event(label,session_id,ping_ms=None):
+    try:
+        with _db_lock:
+            get_db().execute("INSERT INTO events VALUES(NULL,?,?,?,?)",
+                (datetime.now().isoformat(),label,session_id,ping_ms))
+            get_db().commit()
+    except Exception as e:
+        print(f'[db] save_event: {e}')
+
+def get_events():
+    try:
+        with _db_lock:
+            rows=get_db().execute(
+                "SELECT id,ts,label,session_id,ping_ms FROM events ORDER BY id DESC LIMIT 50"
+            ).fetchall()
+        return [dict(r) for r in rows]
+    except Exception as e:
+        print(f'[db] get_events: {e}')
+        return []
+
+def get_session_pings(session_id):
+    try:
+        with _db_lock:
+            rows=get_db().execute(
+                "SELECT ts,ping_ms,status,jitter FROM pings WHERE session_id=? ORDER BY id ASC LIMIT 500",
+                (session_id,)
+            ).fetchall()
+        return [dict(r) for r in rows]
+    except Exception as e:
+        print(f'[db] get_session_pings: {e}')
+        return []
 
 def get_sessions():
     try:
@@ -230,6 +267,39 @@ def get_hourly_stats():
     except Exception as e:
         print(f'[db] get_hourly_stats: {e}')
         return []
+
+def get_daily_stats(days):
+    try:
+        cutoff=(datetime.now()-timedelta(days=days)).strftime('%Y-%m-%d')
+        with _db_lock:
+            rows=get_db().execute("""
+                SELECT date(ts) as day,
+                    AVG(CASE WHEN ping_ms>0 THEN ping_ms END) as avg_ms,
+                    AVG(CASE WHEN jitter IS NOT NULL THEN jitter END) as avg_jitter,
+                    COUNT(*) as total,
+                    SUM(CASE WHEN status='TIMEOUT' THEN 1 ELSE 0 END) as timeouts
+                FROM pings WHERE date(ts)>=?
+                GROUP BY day ORDER BY day
+            """,(cutoff,)).fetchall()
+        return [dict(r) for r in rows]
+    except Exception as e:
+        print(f'[db] get_daily_stats: {e}')
+        return []
+
+def save_session_note(session_id, note):
+    with _db_lock:
+        get_db().execute(
+            "INSERT OR REPLACE INTO session_notes VALUES(?,?,?)",
+            (session_id, note, datetime.now().isoformat())
+        )
+        get_db().commit()
+
+def get_session_note(session_id):
+    with _db_lock:
+        row = get_db().execute(
+            "SELECT note FROM session_notes WHERE session_id=?", (session_id,)
+        ).fetchone()
+    return row['note'] if row else ''
 
 def export_csv(sid=None):
     try:
@@ -401,6 +471,7 @@ def monitor_loop():
             'last_ms':None,'prev_ms':None,'router_ms':None,'dns_ms':None,
             'last_spike':None,'running':True,'hops':[],'hop_changed':False})
         sid=datetime.now().strftime('%Y%m%d_%H%M%S');s['session_id']=sid
+        save_event('RECONNECT',sid)
         s['connected_since']=datetime.now().isoformat()
         ip_connected_since=datetime.now()
         def do_tracert():
@@ -408,12 +479,15 @@ def monitor_loop():
             s['hops']=h
         threading.Thread(target=do_tracert,daemon=True).start()
         while True:
-            if not find_game()[0]:break
+            if not find_game()[0]:
+                save_event('DISCONNECT',sid)
+                break
             if s['count']>0 and s['count']%10==0:
                 nip,nport=find_server_ip(pid)
                 if nip and nip!=server_ip:
                     duration=int((datetime.now()-ip_connected_since).total_seconds())
                     save_switch(sid,server_ip,nip,duration)
+                    save_event('SERVER_SWITCH',sid)
                     old_hops=list(s['hops'])
                     server_ip=nip;server_port=nport
                     s['server_ip']=nip;s['server_port']=nport
@@ -502,7 +576,7 @@ async def handler(ws):
                 csv=export_csv(data.get('session_id'))
                 await ws.send(json.dumps({'type':'csv_data','csv':csv}))
             if data.get('type')=='settings':
-                global INTERVAL, WARN_MS, CRIT_MS
+                global INTERVAL, WARN_MS, CRIT_MS, SPIKE_THRESH, HISTORY, DB_RETENTION_DAYS
                 pi=data.get('pingInterval')
                 if pi in (1,2,5):
                     INTERVAL=int(pi)
@@ -512,8 +586,41 @@ async def handler(ws):
                 cm=data.get('critMs')
                 if cm and 20<=int(cm)<=1000:
                     CRIT_MS=int(cm)
+                st=data.get('spikeThreshold')
+                if st and 5<=int(st)<=100:
+                    SPIKE_THRESH=int(st)
+                if 'historySize' in data:
+                    v=int(data['historySize'])
+                    if v in (50,100,200):
+                        HISTORY=v
+                        with _state_lock:
+                            state['history']=deque(list(state['history'])[-v:],maxlen=v)
+                            state['jitter_history']=deque(list(state['jitter_history'])[-v:],maxlen=v)
+                if 'dataRetention' in data:
+                    v=int(data['dataRetention'])
+                    if v in (7,30,90):
+                        DB_RETENTION_DAYS=v
             if data.get('type')=='get_hourly':
                 await ws.send(json.dumps({'type':'hourly','data':get_hourly_stats()}))
+            if data.get('type')=='get_events':
+                await ws.send(json.dumps({'type':'events','data':get_events()}))
+            if data.get('type')=='get_daily':
+                period=data.get('period',7)
+                if period not in (7,30):period=7
+                await ws.send(json.dumps({'type':'daily','data':get_daily_stats(period),'period':period}))
+            if data.get('type')=='get_session_pings':
+                sid=data.get('session_id','')
+                if sid:
+                    await ws.send(json.dumps({'type':'session_pings','session_id':sid,'data':get_session_pings(sid)}))
+            if data.get('type')=='save_note':
+                sid=data.get('session_id','')
+                note=data.get('note','')
+                if sid:
+                    save_session_note(sid, note)
+            if data.get('type')=='get_note':
+                sid=data.get('session_id','')
+                note=get_session_note(sid) if sid else ''
+                await ws.send(json.dumps({'type':'note','session_id':sid,'note':note}))
             if data.get('type')=='clear_data':
                 with _db_lock:
                     db=get_db()

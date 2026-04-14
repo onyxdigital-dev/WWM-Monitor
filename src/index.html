@@ -8,6 +8,7 @@
 <body>
 <div class="orb orb1"></div>
 <div class="orb orb2"></div>
+<div class="orb orb3"></div>
 <div id="app">
 
   <!-- Sidebar -->
@@ -37,6 +38,9 @@
     <div id="topbar">
       <button class="sb-win-btn no-drag" onclick="minimize()" title="Minimize">
         <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><rect x="1" y="4.5" width="8" height="1" fill="currentColor"/></svg>
+      </button>
+      <button class="sb-win-btn no-drag" id="maximize-btn" onclick="toggleMaximize()" title="Maximize">
+        <svg id="maximize-icon" width="10" height="10" viewBox="0 0 10 10" fill="none"><rect x="1.5" y="1.5" width="7" height="7" rx="0.5" stroke="currentColor" stroke-width="1.1" fill="none"/></svg>
       </button>
       <button class="sb-win-btn close no-drag" onclick="closeApp()" title="Close">
         <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1.5 1.5l7 7M8.5 1.5l-7 7" stroke="currentColor" stroke-width="1.1" stroke-linecap="square"/></svg>
@@ -68,7 +72,11 @@
             <div class="geo-row"><span class="geo-lbl">SERVER IP</span><span class="geo-val" id="geo-ip">—</span></div>
             <div class="geo-row"><span class="geo-lbl">LOCATION</span><span class="geo-val wrap" id="i-loc">—</span></div>
             <div class="geo-row"><span class="geo-lbl">ISP</span><span class="geo-val wrap" id="geo-isp">—</span></div>
-            <div class="geo-row"><span class="geo-lbl">HOPS</span><span class="geo-val" id="geo-hops">—</span></div>
+            <div class="geo-row" id="hops-row" onclick="toggleHops()" style="cursor:pointer;user-select:none;">
+              <span class="geo-lbl">HOPS</span>
+              <span class="geo-val" id="geo-hops">— <span id="hops-expand-icon" style="font-size:9px;opacity:.5;">▾</span></span>
+            </div>
+            <div id="hops-list" style="display:none;padding:4px 0 4px 8px;"></div>
             <div class="geo-row"><span class="geo-lbl">PROCESS</span><span class="geo-val" id="i-proc">—</span></div>
             <div class="geo-row"><span class="geo-lbl">SESSION</span><span class="geo-val session-dur" id="i-connected-since">—</span></div>
             <span id="i-sess" style="display:none"></span>
@@ -84,10 +92,10 @@
             </div>
           </div>
           <div class="card graph-card">
-            <div class="graph-sublabel">PING HISTORY — last 50 pings</div>
+            <div class="graph-sublabel" id="ping-history-label">PING HISTORY — last 50 pings</div>
             <div class="graph-canvas-wrap" style="flex:2;"><canvas id="graph-canvas"></canvas></div>
             <div class="graph-spacer"></div>
-            <div class="graph-sublabel">JITTER HISTORY — last 50</div>
+            <div class="graph-sublabel" id="jitter-history-label">JITTER HISTORY — last 50</div>
             <div class="graph-canvas-wrap" style="flex:1;"><canvas id="jitter-canvas"></canvas></div>
             <div class="divider-line"></div>
             <div class="stat-row">
@@ -169,11 +177,20 @@
         <!-- Dual chart row: ping trend + jitter trend -->
         <div class="dual-chart-row fade-in">
           <div class="card chart-card">
-            <div class="sec-hdr"><div class="sec-bar"></div><div class="sec-title">PING TREND — LAST 24H</div></div>
+            <div class="sec-hdr" style="justify-content:space-between;">
+              <div style="display:flex;align-items:center;gap:8px;"><div class="sec-bar"></div><div class="sec-title" id="chart-period-label-ping">PING TREND — LAST 24H</div></div>
+              <div style="display:flex;gap:3px;">
+                <button class="period-btn seg-btn no-drag active" data-period="24h" onclick="setChartPeriod('24h')">24H</button>
+                <button class="period-btn seg-btn no-drag" data-period="7d" onclick="setChartPeriod('7d')">7D</button>
+                <button class="period-btn seg-btn no-drag" data-period="30d" onclick="setChartPeriod('30d')">30D</button>
+              </div>
+            </div>
             <div class="chart-area"><canvas id="hourly-canvas"></canvas></div>
           </div>
           <div class="card chart-card">
-            <div class="sec-hdr"><div class="sec-bar"></div><div class="sec-title">JITTER TREND — LAST 24H</div></div>
+            <div class="sec-hdr">
+              <div class="sec-bar"></div><div class="sec-title" id="chart-period-label-jitter">JITTER TREND — LAST 24H</div>
+            </div>
             <div class="chart-area"><canvas id="hourly-jitter-canvas"></canvas></div>
           </div>
         </div>
@@ -206,6 +223,7 @@
           </div>
         </div>
 
+
       </div>
     </div>
 
@@ -216,6 +234,8 @@
           <div class="tab no-drag" onclick="switchSettingsTab('monitoring',this)">MONITORING</div>
           <div class="tab no-drag" onclick="switchSettingsTab('overlay',this)">OVERLAY</div>
           <div class="tab no-drag" onclick="switchSettingsTab('notifications',this)">NOTIFICATIONS</div>
+          <div class="tab no-drag" onclick="switchSettingsTab('events',this)">EVENTS</div>
+          <div class="tab no-drag" onclick="switchSettingsTab('integrations',this)">INTEGRATIONS</div>
           <div class="tab no-drag" onclick="switchSettingsTab('about',this)">ABOUT</div>
         </div>
 
@@ -261,6 +281,17 @@
               🗑 CLEAR DATA
             </button>
           </div>
+          <div class="setting-row">
+            <div class="setting-info">
+              <div class="setting-label">Data Retention</div>
+              <div class="setting-desc">How long ping data is kept in the database</div>
+            </div>
+            <div class="seg-btns no-drag">
+              <button class="seg-btn"        data-retention="7"  onclick="document.querySelectorAll('[data-retention]').forEach(b=>b.classList.remove('active'));this.classList.add('active');setDataRetention_(7)">7D</button>
+              <button class="seg-btn active" data-retention="30" onclick="document.querySelectorAll('[data-retention]').forEach(b=>b.classList.remove('active'));this.classList.add('active');setDataRetention_(30)">30D</button>
+              <button class="seg-btn"        data-retention="90" onclick="document.querySelectorAll('[data-retention]').forEach(b=>b.classList.remove('active'));this.classList.add('active');setDataRetention_(90)">90D</button>
+            </div>
+          </div>
         </div>
 
         <!-- MONITORING -->
@@ -299,6 +330,29 @@
               <button class="interval-btn seg-btn no-drag" data-crit="200" onclick="setCrit_(200)">200ms</button>
             </div>
           </div>
+          <div class="setting-row">
+            <div class="setting-info">
+              <div class="setting-label">Spike Threshold</div>
+              <div class="setting-desc">Jitter delta (ms) above which a ping counts as a spike</div>
+            </div>
+            <div id="s-spike" style="display:flex;gap:3px;">
+              <button class="interval-btn seg-btn no-drag" data-spike="5"  onclick="setSpikeThreshold_(5)">5ms</button>
+              <button class="interval-btn seg-btn no-drag active" data-spike="10" onclick="setSpikeThreshold_(10)">10ms</button>
+              <button class="interval-btn seg-btn no-drag" data-spike="20" onclick="setSpikeThreshold_(20)">20ms</button>
+              <button class="interval-btn seg-btn no-drag" data-spike="30" onclick="setSpikeThreshold_(30)">30ms</button>
+            </div>
+          </div>
+          <div class="setting-row">
+            <div class="setting-info">
+              <div class="setting-label">Ping History</div>
+              <div class="setting-desc">Number of ping samples stored in memory</div>
+            </div>
+            <div class="seg-btns no-drag">
+              <button class="seg-btn active" data-history="50"  onclick="document.querySelectorAll('[data-history]').forEach(b=>b.classList.remove('active'));this.classList.add('active');setHistorySize_(50)">50</button>
+              <button class="seg-btn"        data-history="100" onclick="document.querySelectorAll('[data-history]').forEach(b=>b.classList.remove('active'));this.classList.add('active');setHistorySize_(100)">100</button>
+              <button class="seg-btn"        data-history="200" onclick="document.querySelectorAll('[data-history]').forEach(b=>b.classList.remove('active'));this.classList.add('active');setHistorySize_(200)">200</button>
+            </div>
+          </div>
           <div style="height:1px;background:var(--border);margin:20px 0;flex-shrink:0;"></div>
           <div class="settings-sec-hdr">Session</div>
           <div class="setting-row">
@@ -329,6 +383,49 @@
               style="width:130px;padding:6px 10px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:white;font-size:11px;font-family:inherit;cursor:pointer;text-align:center;outline:none;"
               onfocus="startHotkeyRecord(this)" onblur="stopHotkeyRecord(this)"/>
           </div>
+          <div class="settings-sec-hdr">Appearance</div>
+          <div class="setting-row">
+            <div class="setting-info">
+              <div class="setting-label">Opacity</div>
+              <div class="setting-desc">Overlay window opacity (20–100%)</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <input type="range" id="s-overlay-opacity" min="20" max="100" value="100"
+                class="no-drag" style="width:90px;"
+                oninput="document.getElementById('s-overlay-opacity-val').textContent=this.value+'%';saveSetting('overlayOpacity',+this.value)">
+              <span id="s-overlay-opacity-val" style="font-size:11px;color:rgba(255,255,255,.5);min-width:32px;">100%</span>
+            </div>
+          </div>
+          <div class="setting-row">
+            <div class="setting-info">
+              <div class="setting-label">Size</div>
+              <div class="setting-desc">Scale of the overlay widget</div>
+            </div>
+            <div class="seg-btns no-drag">
+              <button class="seg-btn" data-scale="0.8" onclick="document.querySelectorAll('[data-scale]').forEach(b=>b.classList.remove('active'));this.classList.add('active');saveSetting('overlayScale',0.8)">S</button>
+              <button class="seg-btn active" data-scale="1.0" onclick="document.querySelectorAll('[data-scale]').forEach(b=>b.classList.remove('active'));this.classList.add('active');saveSetting('overlayScale',1.0)">M</button>
+              <button class="seg-btn" data-scale="1.3" onclick="document.querySelectorAll('[data-scale]').forEach(b=>b.classList.remove('active'));this.classList.add('active');saveSetting('overlayScale',1.3)">L</button>
+            </div>
+          </div>
+          <div class="setting-row">
+            <div class="setting-info">
+              <div class="setting-label">Color Theme</div>
+              <div class="setting-desc">Accent color of the overlay widget</div>
+            </div>
+            <div class="seg-btns no-drag">
+              <button class="seg-btn active" data-theme="green" onclick="document.querySelectorAll('[data-theme]').forEach(b=>b.classList.remove('active'));this.classList.add('active');saveSetting('overlayTheme','green')" style="color:#22c55e;font-size:14px;">&#9679;</button>
+              <button class="seg-btn" data-theme="blue" onclick="document.querySelectorAll('[data-theme]').forEach(b=>b.classList.remove('active'));this.classList.add('active');saveSetting('overlayTheme','blue')" style="color:#3b82f6;font-size:14px;">&#9679;</button>
+              <button class="seg-btn" data-theme="white" onclick="document.querySelectorAll('[data-theme]').forEach(b=>b.classList.remove('active'));this.classList.add('active');saveSetting('overlayTheme','white')" style="color:rgba(255,255,255,0.85);font-size:14px;">&#9679;</button>
+            </div>
+          </div>
+          <div class="settings-sec-hdr">Behavior</div>
+          <div class="setting-row">
+            <div class="setting-info">
+              <div class="setting-label">Auto-Pause</div>
+              <div class="setting-desc">Hide overlay when game is not running (after 10s)</div>
+            </div>
+            <label class="toggle no-drag"><input type="checkbox" id="s-auto-pause-overlay" checked onchange="saveSetting('autoPauseOverlay',this.checked)"><span class="toggle-track"></span></label>
+          </div>
           <div class="settings-sec-hdr">Visible Columns</div>
           <div class="setting-row">
             <div class="setting-info">
@@ -358,45 +455,52 @@
           <div class="settings-sec-hdr">Notifications</div>
           <div class="setting-row">
             <div class="setting-info">
-              <div class="setting-label">Notifications aktivieren</div>
-              <div class="setting-desc">Windows-Benachrichtigungen für Netzwerkereignisse anzeigen</div>
+              <div class="setting-label">Enable Notifications</div>
+              <div class="setting-desc">Show Windows notifications for network events</div>
             </div>
             <label class="toggle no-drag"><input type="checkbox" id="s-notif-enabled" checked onchange="saveSetting('notificationsEnabled',this.checked)"><span class="toggle-track"></span></label>
           </div>
-          <div class="settings-sec-hdr">Ereignisse</div>
+          <div class="settings-sec-hdr">Events</div>
           <div class="setting-row">
             <div class="setting-info">
-              <div class="setting-label">Spike-Alarm</div>
-              <div class="setting-desc">Benachrichtigung bei einem Ping-Spike</div>
+              <div class="setting-label">Spike Alert</div>
+              <div class="setting-desc">Notification on ping spike</div>
             </div>
             <label class="toggle no-drag"><input type="checkbox" id="s-notif-spike" checked onchange="saveSetting('notifSpike',this.checked)"><span class="toggle-track"></span></label>
           </div>
           <div class="setting-row">
             <div class="setting-info">
-              <div class="setting-label">Verbindungsabbruch</div>
-              <div class="setting-desc">Benachrichtigung wenn die Spielverbindung verloren geht</div>
+              <div class="setting-label">Disconnect</div>
+              <div class="setting-desc">Notification when game connection is lost</div>
             </div>
             <label class="toggle no-drag"><input type="checkbox" id="s-notif-disconnect" checked onchange="saveSetting('notifDisconnect',this.checked)"><span class="toggle-track"></span></label>
           </div>
           <div class="setting-row">
             <div class="setting-info">
-              <div class="setting-label">Wiederverbindung</div>
-              <div class="setting-desc">Benachrichtigung wenn die Verbindung wiederhergestellt wird</div>
+              <div class="setting-label">Reconnect</div>
+              <div class="setting-desc">Notification when connection is restored</div>
             </div>
             <label class="toggle no-drag"><input type="checkbox" id="s-notif-reconnect" checked onchange="saveSetting('notifReconnect',this.checked)"><span class="toggle-track"></span></label>
           </div>
           <div class="setting-row">
             <div class="setting-info">
-              <div class="setting-label">Hoher Paketverlust</div>
-              <div class="setting-desc">Benachrichtigung bei zu hohem Paketverlust</div>
+              <div class="setting-label">High Packet Loss</div>
+              <div class="setting-desc">Notification on excessive packet loss</div>
             </div>
             <label class="toggle no-drag"><input type="checkbox" id="s-notif-loss" checked onchange="saveSetting('notifLoss',this.checked)"><span class="toggle-track"></span></label>
           </div>
-          <div class="settings-sec-hdr">Abklingzeiten</div>
           <div class="setting-row">
             <div class="setting-info">
-              <div class="setting-label">Abklingzeit Spike</div>
-              <div class="setting-desc">Mindestabstand zwischen zwei Spike-Benachrichtigungen (Sekunden)</div>
+              <div class="setting-label">Server Switch</div>
+              <div class="setting-desc">Notification on server switch</div>
+            </div>
+            <label class="toggle no-drag"><input type="checkbox" id="s-notif-server-switch" checked onchange="saveSetting('notifServerSwitch',this.checked)"><span class="toggle-track"></span></label>
+          </div>
+          <div class="settings-sec-hdr">Cooldowns</div>
+          <div class="setting-row">
+            <div class="setting-info">
+              <div class="setting-label">Spike Cooldown</div>
+              <div class="setting-desc">Minimum interval between spike notifications (seconds)</div>
             </div>
             <input type="number" id="s-notif-spike-cd" class="no-drag" min="0" max="300" value="30"
               style="width:64px;padding:6px 10px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:#fff;font-size:11px;font-family:inherit;text-align:center;"
@@ -404,8 +508,8 @@
           </div>
           <div class="setting-row">
             <div class="setting-info">
-              <div class="setting-label">Abklingzeit Loss</div>
-              <div class="setting-desc">Mindestabstand zwischen zwei Loss-Benachrichtigungen (Sekunden)</div>
+              <div class="setting-label">Loss Cooldown</div>
+              <div class="setting-desc">Minimum interval between loss notifications (seconds)</div>
             </div>
             <input type="number" id="s-notif-loss-cd" class="no-drag" min="0" max="300" value="30"
               style="width:64px;padding:6px 10px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:#fff;font-size:11px;font-family:inherit;text-align:center;"
@@ -413,12 +517,104 @@
           </div>
           <div class="setting-row">
             <div class="setting-info">
-              <div class="setting-label">Loss-Schwellwert</div>
-              <div class="setting-desc">Ab welchem Paketverlust (%) eine Benachrichtigung ausgelöst wird</div>
+              <div class="setting-label">Loss Threshold</div>
+              <div class="setting-desc">Packet loss % threshold for notifications</div>
             </div>
             <input type="number" id="s-notif-loss-thr" class="no-drag" min="1" max="100" value="5"
               style="width:64px;padding:6px 10px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:#fff;font-size:11px;font-family:inherit;text-align:center;"
               oninput="saveSetting('notifLossThreshold',+this.value)" onchange="saveSetting('notifLossThreshold',+this.value)">
+          </div>
+        </div>
+
+        <!-- EVENTS -->
+        <div class="tab-content" id="stab-events">
+          <div class="settings-sec-hdr">Event Log</div>
+          <div id="event-log-list" style="max-height:calc(100vh - 180px);overflow-y:auto;padding-bottom:8px;"></div>
+        </div>
+
+        <!-- INTEGRATIONS -->
+        <div class="tab-content" id="stab-integrations">
+          <div class="settings-sec-hdr">Discord Webhook</div>
+          <div class="setting-row" style="flex-direction:column;align-items:stretch;gap:6px;">
+            <div class="setting-info">
+              <div class="setting-label">Webhook URL</div>
+              <div class="setting-desc">Discord webhook URL for network alerts</div>
+            </div>
+            <input id="s-discord-webhook" type="text" class="no-drag"
+              placeholder="https://discord.com/api/webhooks/..."
+              style="width:100%;padding:7px 10px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:white;font-size:11px;font-family:inherit;outline:none;box-sizing:border-box;"
+              oninput="saveSetting('discordWebhook',this.value)">
+          </div>
+          <div class="setting-row">
+            <div class="setting-info">
+              <div class="setting-label">Discord Notifications</div>
+              <div class="setting-desc">Enable Discord webhook messages</div>
+            </div>
+            <label class="toggle no-drag"><input type="checkbox" id="s-discord-enabled" onchange="saveSetting('discordEnabled',this.checked)"><span class="toggle-track"></span></label>
+          </div>
+          <div class="settings-sec-hdr">Events</div>
+          <div class="setting-row">
+            <div class="setting-info">
+              <div class="setting-label">Spike</div>
+              <div class="setting-desc">Discord alert on ping spike</div>
+            </div>
+            <label class="toggle no-drag"><input type="checkbox" id="s-discord-spike" checked onchange="saveSetting('discordSpike',this.checked)"><span class="toggle-track"></span></label>
+          </div>
+          <div class="setting-row">
+            <div class="setting-info">
+              <div class="setting-label">Disconnect</div>
+              <div class="setting-desc">Discord alert on connection loss</div>
+            </div>
+            <label class="toggle no-drag"><input type="checkbox" id="s-discord-disconnect" checked onchange="saveSetting('discordDisconnect',this.checked)"><span class="toggle-track"></span></label>
+          </div>
+          <div class="setting-row">
+            <div class="setting-info">
+              <div class="setting-label">Reconnect</div>
+              <div class="setting-desc">Discord alert on reconnect</div>
+            </div>
+            <label class="toggle no-drag"><input type="checkbox" id="s-discord-reconnect" checked onchange="saveSetting('discordReconnect',this.checked)"><span class="toggle-track"></span></label>
+          </div>
+          <div class="setting-row">
+            <div class="setting-info">
+              <div class="setting-label">Packet Loss</div>
+              <div class="setting-desc">Discord alert on high packet loss</div>
+            </div>
+            <label class="toggle no-drag"><input type="checkbox" id="s-discord-loss" checked onchange="saveSetting('discordLoss',this.checked)"><span class="toggle-track"></span></label>
+          </div>
+          <div class="setting-row">
+            <div class="setting-info">
+              <div class="setting-label">Server Switch</div>
+              <div class="setting-desc">Discord alert on server switch</div>
+            </div>
+            <label class="toggle no-drag"><input type="checkbox" id="s-discord-server-switch" checked onchange="saveSetting('discordServerSwitch',this.checked)"><span class="toggle-track"></span></label>
+          </div>
+          <div class="settings-sec-hdr">Cooldowns</div>
+          <div class="setting-row">
+            <div class="setting-info">
+              <div class="setting-label">Spike Cooldown</div>
+              <div class="setting-desc">Minimum interval between spike alerts (seconds)</div>
+            </div>
+            <input id="s-discord-spike-cooldown" type="number" min="0" max="3600" value="60" class="no-drag"
+              style="width:64px;padding:6px 8px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:white;font-size:11px;font-family:inherit;text-align:center;outline:none;"
+              oninput="saveSetting('discordSpikeCooldown',+this.value)">
+          </div>
+          <div class="setting-row">
+            <div class="setting-info">
+              <div class="setting-label">Loss Cooldown</div>
+              <div class="setting-desc">Minimum interval between packet loss alerts (seconds)</div>
+            </div>
+            <input id="s-discord-loss-cooldown" type="number" min="0" max="3600" value="60" class="no-drag"
+              style="width:64px;padding:6px 8px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:white;font-size:11px;font-family:inherit;text-align:center;outline:none;"
+              oninput="saveSetting('discordLossCooldown',+this.value)">
+          </div>
+          <div class="setting-row">
+            <div class="setting-info">
+              <div class="setting-label">Loss Threshold</div>
+              <div class="setting-desc">Packet loss % threshold for alerts</div>
+            </div>
+            <input id="s-discord-loss-threshold" type="number" min="1" max="100" value="5" class="no-drag"
+              style="width:64px;padding:6px 8px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:white;font-size:11px;font-family:inherit;text-align:center;outline:none;"
+              oninput="saveSetting('discordLossThreshold',+this.value)">
           </div>
         </div>
 
@@ -446,8 +642,35 @@
         </div>
       </div>
 
+
   </div><!-- #pages -->
   </div><!-- #main -->
+
+<!-- Session Detail Modal -->
+<div id="session-modal" class="modal-hidden" onclick="closeSessionModal(event)">
+  <div class="card" style="width:600px;max-width:90vw;max-height:80vh;overflow-y:auto;position:relative;padding:0;" onclick="event.stopPropagation()">
+    <div style="padding:14px 16px 8px;display:flex;align-items:flex-start;justify-content:space-between;">
+      <div>
+        <div style="font-size:12px;font-weight:700;color:white;margin-bottom:2px;" id="modal-title">Session Detail</div>
+        <div style="font-size:10px;color:var(--muted);" id="modal-sub">—</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="font-size:28px;font-weight:800;" id="modal-grade">—</div>
+        <button onclick="closeSessionModal()" style="background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;padding:0 4px;font-family:inherit;">✕</button>
+      </div>
+    </div>
+    <div class="stat-row" id="modal-stats" style="padding:0 16px 8px;flex-wrap:wrap;"></div>
+    <div style="padding:0 16px 4px;font-size:9px;font-weight:700;color:var(--muted);letter-spacing:.08em;">PING HISTORY</div>
+    <div style="padding:0 16px;height:90px;"><canvas id="modal-ping-canvas" style="width:100%;height:100%;display:block;"></canvas></div>
+    <div style="padding:4px 16px 4px;font-size:9px;font-weight:700;color:var(--muted);letter-spacing:.08em;">JITTER HISTORY</div>
+    <div style="padding:0 16px 14px;height:56px;"><canvas id="modal-jitter-canvas" style="width:100%;height:100%;display:block;"></canvas></div>
+    <div style="padding:8px 16px 14px;">
+      <textarea id="modal-note" placeholder="Add a note..."
+        style="width:100%;box-sizing:border-box;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;color:white;font-size:11px;font-family:inherit;padding:8px;resize:none;height:56px;outline:none;"
+        oninput="debounceSaveNote(this.value)"></textarea>
+    </div>
+  </div>
+</div>
 
 </div><!-- #app -->
 
@@ -466,16 +689,30 @@ window.addEventListener('load',()=>{
   loadSettings();
   connect();
   initUpdater();
+  if (window.electronAPI && window.electronAPI.onWindowState) {
+    window.electronAPI.onWindowState(({maximized}) => {
+      const icon = document.getElementById('maximize-icon');
+      const btn  = document.getElementById('maximize-btn');
+      if (btn) btn.title = maximized ? 'Restore' : 'Maximize';
+      if (icon) icon.innerHTML = maximized
+        ? '<path d="M1.5 3.5h5v5h-5z" stroke="currentColor" stroke-width="1.1" fill="none"/><path d="M3.5 3.5V1.5h5v5H6.5" stroke="currentColor" stroke-width="1.1" fill="none"/>'
+        : '<rect x="1.5" y="1.5" width="7" height="7" rx="0.5" stroke="currentColor" stroke-width="1.1" fill="none"/>';
+    });
+  }
+  let _resizeTimer=null;
   window.addEventListener('resize',()=>{
     if(zoomAnim){cancelAnimationFrame(zoomAnim);zoomAnim=null;}
-    const c=getCanvas();
-    if(c){view.scale=c.offsetHeight/MAP_H;view.x=(c.offsetWidth-MAP_W*view.scale)/2;view.y=0;}
-    drawMapCanvas();
-    drawGraph();
-    drawJitter();
-    const dc=document.getElementById('dash-map-canvas');
-    if(dc){dashView.scale=dc.offsetHeight/MAP_H;dashView.x=(dc.offsetWidth-MAP_W*dashView.scale)/2;dashView.y=0;}
-    drawDashMap();
+    clearTimeout(_resizeTimer);
+    _resizeTimer=setTimeout(()=>{
+      const c=getCanvas();
+      if(c){view.scale=c.offsetHeight/MAP_H;view.x=(c.offsetWidth-MAP_W*view.scale)/2;view.y=0;}
+      drawMapCanvas();
+      drawGraph();
+      drawJitter();
+      const dc=document.getElementById('dash-map-canvas');
+      if(dc){dashView.scale=dc.offsetHeight/MAP_H;dashView.x=(dc.offsetWidth-MAP_W*dashView.scale)/2;dashView.y=0;}
+      drawDashMap();
+    },80);
   });
 });
 </script>

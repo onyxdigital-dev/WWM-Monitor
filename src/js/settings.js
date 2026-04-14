@@ -1,11 +1,22 @@
+let _dashRefreshTimer = null
+
+function requestDashData() {
+  if (ws && ws.readyState === 1) {
+    ws.send(JSON.stringify({type:'get_sessions'}));
+    ws.send(JSON.stringify({type:'get_switches'}));
+    ws.send(JSON.stringify({type:'get_hourly'}));
+  }
+}
+
 function switchTab(tab) {
   document.querySelectorAll('.sb-btn').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-'+tab).classList.add('active');
-  if (tab==='dash' && ws && ws.readyState===1) {
-    ws.send(JSON.stringify({type:'get_sessions'}));
-    ws.send(JSON.stringify({type:'get_switches'}));
-    ws.send(JSON.stringify({type:'get_hourly'}));
+  clearInterval(_dashRefreshTimer);
+  _dashRefreshTimer = null;
+  if (tab==='dash') {
+    requestDashData();
+    _dashRefreshTimer = setInterval(requestDashData, 10000);
   }
 }
 
@@ -14,10 +25,12 @@ function switchSettingsTab(name, el) {
   document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
   el.classList.add('active');
   document.getElementById('stab-' + name).classList.add('active');
+  if (name === 'events' && ws && ws.readyState === 1) ws.send(JSON.stringify({type:'get_events'}));
 }
 
 function minimize() { if(window.electronAPI) window.electronAPI.minimize(); }
 function closeApp()  { if(window.electronAPI) window.electronAPI.close(); }
+function toggleMaximize() { if(window.electronAPI) window.electronAPI.send('toggle-maximize'); }
 
 // ── Auto Updater ─────────────────────────────────────────────────────────────
 let updateDownloaded = false;
@@ -84,7 +97,7 @@ function toggleOverlay() {
 }
 
 // ── Settings ───────────────────────────────────────────────────────────────
-let cfg={startup:false,startMinimized:false,tray:true,spikeMs:150,lossPct:5,pingInterval:2,warnMs:80,critMs:150,overlayJitter:true,overlayLoss:true,overlaySparkline:true,notificationsEnabled:true,notifSpike:true,notifDisconnect:true,notifReconnect:true,notifLoss:true,notifSpikeCooldown:30,notifLossCooldown:30,notifLossThreshold:5};
+let cfg={startup:false,startMinimized:false,tray:true,spikeMs:150,lossPct:5,pingInterval:2,warnMs:80,critMs:150,spikeThreshold:10,overlayJitter:true,overlayLoss:true,overlaySparkline:true,notificationsEnabled:true,notifSpike:true,notifDisconnect:true,notifReconnect:true,notifLoss:true,notifServerSwitch:true,notifSpikeCooldown:30,notifLossCooldown:30,notifLossThreshold:5,overlayOpacity:100,overlayScale:1.0,overlayTheme:'green',autoPauseOverlay:true,historySize:50,dataRetention:30,discordWebhook:'',discordEnabled:false,discordSpike:true,discordDisconnect:true,discordReconnect:true,discordLoss:true,discordServerSwitch:true,discordSpikeCooldown:60,discordLossCooldown:60,discordLossThreshold:5};
 
 function applySettingsToUI(){
   document.getElementById('s-startup').checked=cfg.startup||false;
@@ -95,6 +108,7 @@ function applySettingsToUI(){
   setInterval_(cfg.pingInterval||2, true);
   setWarn_(cfg.warnMs||80, true);
   setCrit_(cfg.critMs||150, true);
+  setSpikeThreshold_(cfg.spikeThreshold||10, true);
   document.getElementById('s-overlay-jitter').checked=cfg.overlayJitter!==false;
   document.getElementById('s-overlay-loss').checked=cfg.overlayLoss!==false;
   document.getElementById('s-overlay-sparkline').checked=cfg.overlaySparkline!==false;
@@ -108,12 +122,46 @@ function applySettingsToUI(){
   if (nr) nr.checked = cfg.notifReconnect !== false;
   const nl = document.getElementById('s-notif-loss');
   if (nl) nl.checked = cfg.notifLoss !== false;
+  const nsw = document.getElementById('s-notif-server-switch');
+  if (nsw) nsw.checked = cfg.notifServerSwitch !== false;
   const sc = document.getElementById('s-notif-spike-cd');
   if (sc) sc.value = cfg.notifSpikeCooldown != null ? cfg.notifSpikeCooldown : 30;
   const lc = document.getElementById('s-notif-loss-cd');
   if (lc) lc.value = cfg.notifLossCooldown != null ? cfg.notifLossCooldown : 30;
   const lt = document.getElementById('s-notif-loss-thr');
   if (lt) lt.value = cfg.notifLossThreshold != null ? cfg.notifLossThreshold : 5;
+  const opacityInput = document.getElementById('s-overlay-opacity')
+  if (opacityInput) {
+    opacityInput.value = cfg.overlayOpacity ?? 100
+    const opacityDisplay = document.getElementById('s-overlay-opacity-val')
+    if (opacityDisplay) opacityDisplay.textContent = (cfg.overlayOpacity ?? 100) + '%'
+  }
+  document.querySelectorAll('[data-scale]').forEach(b => b.classList.toggle('active', +b.dataset.scale === (cfg.overlayScale ?? 1.0)))
+  document.querySelectorAll('[data-theme]').forEach(b => b.classList.toggle('active', b.dataset.theme === (cfg.overlayTheme || 'green')))
+  const autoPause = document.getElementById('s-auto-pause-overlay')
+  if (autoPause) autoPause.checked = cfg.autoPauseOverlay !== false
+  setHistorySize_(cfg.historySize || 50, true)
+  setDataRetention_(cfg.dataRetention || 30, true)
+  const dw = document.getElementById('s-discord-webhook')
+  if (dw) dw.value = cfg.discordWebhook || ''
+  const de = document.getElementById('s-discord-enabled')
+  if (de) de.checked = cfg.discordEnabled === true
+  const ds = document.getElementById('s-discord-spike')
+  if (ds) ds.checked = cfg.discordSpike !== false
+  const dd = document.getElementById('s-discord-disconnect')
+  if (dd) dd.checked = cfg.discordDisconnect !== false
+  const dr = document.getElementById('s-discord-reconnect')
+  if (dr) dr.checked = cfg.discordReconnect !== false
+  const dl = document.getElementById('s-discord-loss')
+  if (dl) dl.checked = cfg.discordLoss !== false
+  const dsw = document.getElementById('s-discord-server-switch')
+  if (dsw) dsw.checked = cfg.discordServerSwitch !== false
+  const dsc = document.getElementById('s-discord-spike-cooldown')
+  if (dsc) dsc.value = cfg.discordSpikeCooldown ?? 60
+  const dlc = document.getElementById('s-discord-loss-cooldown')
+  if (dlc) dlc.value = cfg.discordLossCooldown ?? 60
+  const dlt = document.getElementById('s-discord-loss-threshold')
+  if (dlt) dlt.value = cfg.discordLossThreshold ?? 5
 }
 
 function saveSetting(k,v){
@@ -129,6 +177,22 @@ function saveSetting(k,v){
     WARN=cfg.warnMs||80; CRIT=cfg.critMs||150;
     if(ws&&ws.readyState===1) ws.send(JSON.stringify({type:'settings',warnMs:cfg.warnMs,critMs:cfg.critMs}));
   }
+  if(k==='spikeThreshold'){
+    if(ws&&ws.readyState===1) ws.send(JSON.stringify({type:'settings',spikeThreshold:v}));
+  }
+  if (k === 'historySize') {
+    if (ws && ws.readyState === 1) ws.send(JSON.stringify({type:'settings', historySize: v}))
+  }
+  if (k === 'dataRetention') {
+    if (ws && ws.readyState === 1) ws.send(JSON.stringify({type:'settings', dataRetention: v}))
+  }
+  if (k === 'overlayOpacity' || k === 'overlayScale' || k === 'overlayTheme') {
+    if (window.electronAPI) window.electronAPI.send('set-overlay-config', {
+      opacity: cfg.overlayOpacity,
+      scale:   cfg.overlayScale,
+      theme:   cfg.overlayTheme,
+    })
+  }
 }
 function setWarn_(v, skipSave){
   document.querySelectorAll('[data-warn]').forEach(b=>b.classList.toggle('active',+b.dataset.warn===v));
@@ -137,6 +201,22 @@ function setWarn_(v, skipSave){
 function setCrit_(v, skipSave){
   document.querySelectorAll('[data-crit]').forEach(b=>b.classList.toggle('active',+b.dataset.crit===v));
   if(!skipSave) saveSetting('critMs',v);
+}
+function setSpikeThreshold_(v, skipSave){
+  document.querySelectorAll('[data-spike]').forEach(b=>b.classList.toggle('active',+b.dataset.spike===v));
+  if(!skipSave) saveSetting('spikeThreshold',v);
+}
+function setHistorySize_(v, skipSave) {
+  document.querySelectorAll('[data-history]').forEach(b => b.classList.toggle('active', +b.dataset.history === v))
+  const pl = document.getElementById('ping-history-label')
+  if (pl) pl.textContent = 'PING HISTORY — last ' + v + ''
+  const jl = document.getElementById('jitter-history-label')
+  if (jl) jl.textContent = 'JITTER HISTORY — last ' + v
+  if (!skipSave) saveSetting('historySize', v)
+}
+function setDataRetention_(v, skipSave) {
+  document.querySelectorAll('[data-retention]').forEach(b => b.classList.toggle('active', +b.dataset.retention === v))
+  if (!skipSave) saveSetting('dataRetention', v)
 }
 function setInterval_(v, skipSave){
   document.querySelectorAll('.interval-btn[data-val]').forEach(b=>b.classList.toggle('active',+b.dataset.val===v));

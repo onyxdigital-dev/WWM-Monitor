@@ -1,7 +1,24 @@
 let ws;
 let _notifLastAt = { spike: 0, loss: 0 };
+let _discordLastAt = { spike: 0, loss: 0 };
 let _prevRunning = null;
+let _prevServerIp = null;
 let WARN=80, CRIT=150;
+let _chartPeriod = '24h';
+let _lastDailyData = [];
+let _hopsExpanded = false;
+
+function sendDiscordWebhook(title, description, color) {
+  const url = cfg.discordWebhook;
+  if (!url || !cfg.discordEnabled) return;
+  fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      embeds: [{ title, description, color, timestamp: new Date().toISOString() }]
+    })
+  }).catch(() => {});
+}
 
 function connect() {
   ws = new WebSocket('ws://localhost:7373');
@@ -11,8 +28,14 @@ function connect() {
     // Delay allows backfill_geo to complete for existing IPs before we request sessions
     setTimeout(()=>{
       if(ws&&ws.readyState===1){
+        // Sync saved settings to Python (loadSettings resolves well within 3s)
+        ws.send(JSON.stringify({type:'settings',
+          historySize:   (typeof cfg!=='undefined' && cfg.historySize)   || 50,
+          dataRetention: (typeof cfg!=='undefined' && cfg.dataRetention) || 30,
+        }));
         ws.send(JSON.stringify({type:'get_sessions'}));
         ws.send(JSON.stringify({type:'get_switches'}));
+        ws.send(JSON.stringify({type:'get_events'}));
       }
     }, 3000);
   };
@@ -30,7 +53,46 @@ function connect() {
       if(ws&&ws.readyState===1){ws.send(JSON.stringify({type:'get_sessions'}));ws.send(JSON.stringify({type:'get_switches'}));}
     }
     if (msg.type==='hourly')       { drawHourly(msg.data); drawHourlyJitter(msg.data); }
+    if (msg.type==='events')       updateEvents(msg.data);
+    if (msg.type==='daily') {
+      _lastDailyData = msg.data || [];
+      drawDailyPing(_lastDailyData);
+      drawDailyJitter(_lastDailyData);
+    }
+    if (msg.type==='session_pings') {
+      const sessRow = (sessAllRows||[]).find(r => r.session_id === msg.session_id);
+      if (sessRow) renderSessionModal(sessRow, msg.data || []);
+    }
+    if (msg.type==='note') {
+      const modal = document.getElementById('session-modal')
+      if (modal && modal.classList.contains('modal-visible')) {
+        const noteEl = document.getElementById('modal-note')
+        if (noteEl) noteEl.value = msg.note || ''
+      }
+    }
   };
+}
+
+function setChartPeriod(p) {
+  _chartPeriod = p;
+  document.querySelectorAll('.period-btn').forEach(b => b.classList.toggle('active', b.dataset.period === p));
+  updatePeriodLabels();
+  if (p === '24h') {
+    drawHourly(lastHourlyData);
+    drawHourlyJitter(lastHourlyData);
+  } else {
+    const days = p === '7d' ? 7 : 30;
+    if (ws && ws.readyState === 1) ws.send(JSON.stringify({type:'get_daily', period: days}));
+  }
+}
+
+function updatePeriodLabels() {
+  const labels = { '24h': 'LAST 24H', '7d': 'LAST 7 DAYS', '30d': 'LAST 30 DAYS' };
+  const lbl = labels[_chartPeriod] || 'LAST 24H';
+  const pingEl = document.getElementById('chart-period-label-ping');
+  const jitterEl = document.getElementById('chart-period-label-jitter');
+  if (pingEl) pingEl.textContent = 'PING TREND — ' + lbl;
+  if (jitterEl) jitterEl.textContent = 'JITTER TREND — ' + lbl;
 }
 
 // ── Reset Session ──────────────────────────────────────────────────────────
@@ -44,6 +106,24 @@ function onSessionReset() {
   if(ws&&ws.readyState===1){ws.send(JSON.stringify({type:'get_sessions'}));ws.send(JSON.stringify({type:'get_switches'}));}
 }
 
+// ── Traceroute hops expand/collapse ────────────────────────────────────────
+function toggleHops() {
+  _hopsExpanded = !_hopsExpanded
+  const list = document.getElementById('hops-list')
+  const icon = document.getElementById('hops-expand-icon')
+  if (list) list.style.display = _hopsExpanded ? 'block' : 'none'
+  if (icon) icon.textContent = _hopsExpanded ? '▴' : '▾'
+  if (_hopsExpanded) renderHopsList(window._currentHops || [])
+}
+
+function renderHopsList(hops) {
+  const list = document.getElementById('hops-list')
+  if (!list) return
+  list.innerHTML = hops.map((ip, i) =>
+    '<div class="hop-row"><span class="hop-num">' + (i+1) + '</span><span class="hop-ip">' + ip + '</span></div>'
+  ).join('')
+}
+
 // ── connected_since Timer (#4) ─────────────────────────────────────────────
 // Stored once from WS state, ticked independently every second
 let connectedSinceTs = null;
@@ -55,7 +135,7 @@ setInterval(() => {
   const diff = Math.floor((Date.now() - connectedSinceTs) / 1000);
   const h = Math.floor(diff / 3600), m = Math.floor(diff % 3600 / 60), s = diff % 60;
   const dur = h > 0 ? `${h}h ${m}m ${s}s` : m > 0 ? `${m}m ${s}s` : `${s}s`;
-  el.textContent = new Date(connectedSinceTs).toLocaleTimeString('de-DE') + '  +' + dur;
+  el.textContent = new Date(connectedSinceTs).toLocaleTimeString('en-US') + '  +' + dur;
 }, 1000);
 
 // ── Live ───────────────────────────────────────────────────────────────────
@@ -100,8 +180,13 @@ function updateLive(d) {
     document.getElementById('provider-health-pct').textContent=Math.round(health)+'%';
   }
 
-  if (d.hops && d.hops.length)
-    document.getElementById('geo-hops').textContent=d.hops.length+' hops';
+  if (d.hops && d.hops.length) {
+    window._currentHops = d.hops
+    const icon = _hopsExpanded ? '▴' : '▾'
+    const hopsEl = document.getElementById('geo-hops')
+    if (hopsEl) hopsEl.innerHTML = d.hops.length + ' hops <span id="hops-expand-icon" style="font-size:9px;opacity:.5;">' + icon + '</span>'
+    if (_hopsExpanded) renderHopsList(d.hops)
+  }
 
   const pn=document.getElementById('ping-num');
   const pill=document.getElementById('status-pill');
@@ -175,6 +260,7 @@ function updateLive(d) {
   if (window.electronAPI && window.electronAPI.sendPingData)
     window.electronAPI.sendPingData({
       ms, status: d.status, jitter, loss,
+      running: !!d.running,
       router_ms: d.router_ms ?? null,
       geo_city: d.geo_city || '',
       geo_country: d.geo_country || '',
@@ -195,11 +281,16 @@ function updateLive(d) {
     // Disconnect / Reconnect — no cooldown, fire every transition
     if (_prevRunning !== null) {
       if (_prevRunning && !d.running && cfg.notifDisconnect !== false)
-        window.electronAPI.notify('WWM Monitor — Verbindung verloren', 'Spiel-Server nicht erreichbar');
+        window.electronAPI.notify('WWM Monitor — Connection lost', 'Game server unreachable');
       if (!_prevRunning && d.running && cfg.notifReconnect !== false)
-        window.electronAPI.notify('WWM Monitor — Verbunden', `${loc ? loc + ' · ' : ''}${ms != null ? ms + ' ms' : ''}`);
+        window.electronAPI.notify('WWM Monitor — Connected', `${loc ? loc + ' · ' : ''}${ms != null ? ms + ' ms' : ''}`);
     }
-    _prevRunning = !!d.running;
+
+    // Server-Switch notification
+    if (cfg.notifServerSwitch !== false && _prevServerIp !== null && d.server_ip && d.server_ip !== _prevServerIp) {
+      const loc = d.geo_city ? `${d.geo_city}, ${d.geo_country} · ` : '';
+      window.electronAPI.notify('WWM Monitor — Server switch', `${loc}${d.server_ip}`);
+    }
 
     // Spike
     if (d.is_spike && ms != null && cfg.notifSpike !== false) {
@@ -216,8 +307,44 @@ function updateLive(d) {
       const cooldownMs = (cfg.notifLossCooldown != null ? cfg.notifLossCooldown : 30) * 1000;
       if (now - _notifLastAt.loss >= cooldownMs) {
         _notifLastAt.loss = now;
-        window.electronAPI.notify('WWM Monitor — Paketverlust', `Loss: ${loss}%${locStr}`);
+        window.electronAPI.notify('WWM Monitor — Packet loss', `Loss: ${loss}%${locStr}`);
       }
     }
   }
+
+  // ── Discord webhook triggers ────────────────────────────────────────────
+  if (cfg.discordEnabled && cfg.discordWebhook) {
+    const _now = Date.now() / 1000;
+    const _loc = d.geo_city ? ' \u00b7 ' + d.geo_city : '';
+    const _ms  = ms != null ? ms : '?';
+
+    if (_prevRunning !== null && _prevRunning && !d.running && cfg.discordDisconnect)
+      sendDiscordWebhook('\ud83d\udd34 Connection lost', 'WWM server unreachable', 15158332);
+
+    if (_prevRunning !== null && !_prevRunning && d.running && cfg.discordReconnect)
+      sendDiscordWebhook('\ud83d\udfe2 Connected', (d.geo_city || d.geo_country || '') + ' \u00b7 ' + _ms + ' ms', 3066993);
+
+    if (_prevServerIp !== null && d.server_ip && d.server_ip !== _prevServerIp && cfg.discordServerSwitch)
+      sendDiscordWebhook('\ud83d\udd35 Server switch', (d.geo_city || d.server_ip || '?') + (d.server_ip ? ' (' + d.server_ip + ')' : ''), 3447003);
+
+    if (d.is_spike && ms != null && cfg.discordSpike) {
+      const cooldown = cfg.discordSpikeCooldown ?? 60;
+      if (_now - _discordLastAt.spike >= cooldown) {
+        _discordLastAt.spike = _now;
+        sendDiscordWebhook('\ud83d\udfe1 Ping spike', 'Ping: ' + _ms + ' ms' + _loc, 16776960);
+      }
+    }
+
+    if (d.running && cfg.discordLoss) {
+      const threshold = cfg.discordLossThreshold ?? 5;
+      const cooldown  = cfg.discordLossCooldown ?? 60;
+      if (loss >= threshold && _now - _discordLastAt.loss >= cooldown) {
+        _discordLastAt.loss = _now;
+        sendDiscordWebhook('\ud83d\udd34 Packet loss', 'Loss: ' + loss + '%' + _loc, 15158332);
+      }
+    }
+  }
+
+  _prevRunning = !!d.running;
+  if (d.server_ip) _prevServerIp = d.server_ip;
 }

@@ -1,4 +1,7 @@
 // ── Dashboard ──────────────────────────────────────────────────────────────
+let _modalSessionId = null
+let _noteDebounce = null
+
 function setHeroVal(id,text,color){const el=document.getElementById(id);if(!el)return;el.textContent=text;el.style.color=color;}
 function setText(id,text){const el=document.getElementById(id);if(el)el.textContent=text;}
 function calcCombinedScore(avg,lossPct,jitter){
@@ -80,6 +83,8 @@ function renderSessPage(){
     const lossCol=loss>5?'var(--red)':loss>0?'var(--yellow)':'var(--green)';
     const card=document.createElement('div');
     card.className='sess-card';
+    card.style.cursor='pointer';
+    card.onclick=()=>openSessionDetail(r.session_id);
     card.innerHTML=`
       <div class="sess-top">
         <div class="sess-grade" style="color:${gradeCol}">${grade}</div>
@@ -176,7 +181,7 @@ function fmtDuration(secs){
 }
 function fmtTs(iso){
   if(!iso)return'—';
-  try{const d=new Date(iso);return d.toLocaleDateString('de-DE')+' '+d.toLocaleTimeString('de-DE');}catch(e){return iso;}
+  try{const d=new Date(iso);return d.toLocaleDateString('en-US')+' '+d.toLocaleTimeString('en-US');}catch(e){return iso;}
 }
 
 function updateSwitches(rows){
@@ -202,6 +207,35 @@ function updateSwitches(rows){
   });
 }
 
+function updateEvents(data){
+  const el=document.getElementById('event-log-list');
+  if(!el)return;
+  el.innerHTML='';
+  if(!data||!data.length){
+    el.innerHTML='<div style="text-align:center;color:var(--muted);padding:20px;font-size:11px;">No events recorded yet.</div>';
+    return;
+  }
+  data.forEach(r=>{
+    const labelColors={
+      'DISCONNECT':   '#ef4444',
+      'RECONNECT':    '#22c55e',
+      'SERVER_SWITCH':'#3b82f6',
+    };
+    const col=labelColors[r.label]||'rgba(255,255,255,.5)';
+    const div=document.createElement('div');
+    div.className='ev-row';
+    const time=(fmtTs(r.ts)||'').split(' ')[1]||'—';
+    const date=(fmtTs(r.ts)||'').split(' ')[0]||'—';
+    const extra=r.ping_ms!=null&&r.ping_ms>0?` · ${r.ping_ms} ms`:'';
+    div.innerHTML=`
+      <div class="ev-time">${date} ${time}</div>
+      <div class="ev-badge" style="color:${col};background:${col}1a;border:1px solid ${col}33;">${r.label.replace('_',' ')}</div>
+      <div class="ev-sid">${(r.session_id||'').slice(-8)}${extra}</div>
+    `;
+    el.appendChild(div);
+  });
+}
+
 // ── CSV Export ─────────────────────────────────────────────────────────────
 function exportCSV(){
   if(!ws||ws.readyState!==1)return;
@@ -214,4 +248,86 @@ function downloadCSV(csvStr){
   a.href=url;a.download=`wwm_export_${Date.now()}.csv`;
   document.body.appendChild(a);a.click();
   document.body.removeChild(a);URL.revokeObjectURL(url);
+}
+
+function openSessionDetail(sessionId) {
+  _modalSessionId = sessionId
+  if (ws && ws.readyState === 1) ws.send(JSON.stringify({type:'get_session_pings', session_id: sessionId}));
+}
+
+function closeSessionModal(e) {
+  if (e && e.target !== document.getElementById('session-modal')) return;
+  document.getElementById('session-modal').className = 'modal-hidden';
+}
+
+function renderSessionModal(sessRow, pings) {
+  const modal = document.getElementById('session-modal');
+  document.getElementById('modal-title').textContent = 'Session · ' + fmtSessionId(sessRow.session_id);
+  const durFmt = fmtDuration(sessRow.duration_seconds);
+  const loc = sessRow.geo_city ? `${sessRow.geo_city}, ${sessRow.geo_country} · ` : '';
+  document.getElementById('modal-sub').textContent = `${loc}${durFmt}`;
+  const loss = sessRow.total ? Math.round(sessRow.timeouts * 100 / sessRow.total) : 0;
+  const avg = sessRow.avg ? Math.round(sessRow.avg) : 0;
+  const jitter = sessRow.jitter ? Math.round(sessRow.jitter) : 0;
+  const score = qualityScore(avg, loss, jitter, sessRow.spikes || 0, sessRow.total);
+  const grade = score == null ? '—' : score >= 95 ? 'A+' : score >= 85 ? 'A' : score >= 70 ? 'B' : score >= 55 ? 'C' : score >= 40 ? 'D' : 'F';
+  const gradeCol = score == null ? 'var(--muted)' : score >= 85 ? 'var(--green)' : score >= 70 ? 'var(--yellow)' : 'var(--red)';
+  const gradeEl = document.getElementById('modal-grade');
+  gradeEl.textContent = grade;
+  gradeEl.style.color = gradeCol;
+  const statsEl = document.getElementById('modal-stats');
+  statsEl.innerHTML = `
+    <div class="stat-tile"><div class="stat-val" style="color:var(--yellow)">${avg || '—'}</div><div class="stat-lbl">AVG ms</div></div>
+    <div class="stat-tile"><div class="stat-val" style="color:var(--green)">${sessRow.mn || '—'}</div><div class="stat-lbl">MIN ms</div></div>
+    <div class="stat-tile"><div class="stat-val" style="color:var(--red)">${sessRow.mx || '—'}</div><div class="stat-lbl">MAX ms</div></div>
+    <div class="stat-tile"><div class="stat-val" style="color:var(--red)">${loss}%</div><div class="stat-lbl">LOSS</div></div>
+    <div class="stat-tile"><div class="stat-val" style="color:var(--yellow)">${jitter || '—'}</div><div class="stat-lbl">JITTER</div></div>
+    <div class="stat-tile"><div class="stat-val" style="color:var(--purple)">${sessRow.spikes != null ? sessRow.spikes : '—'}</div><div class="stat-lbl">SPIKES</div></div>
+  `;
+  modal.className = 'modal-visible';
+  requestAnimationFrame(() => {
+    const pingVals = pings.map(p => p.ping_ms > 0 ? p.ping_ms : null);
+    const jitterVals = pings.map(p => p.jitter != null ? p.jitter : null);
+    drawModalGraph(document.getElementById('modal-ping-canvas'), pingVals, WARN, CRIT);
+    drawModalGraph(document.getElementById('modal-jitter-canvas'), jitterVals, 10, 20);
+  });
+  // Clear and request note
+  const noteEl = document.getElementById('modal-note')
+  if (noteEl) noteEl.value = ''
+  if (ws && ws.readyState === 1)
+    ws.send(JSON.stringify({type:'get_note', session_id: sessRow.session_id}))
+}
+
+function debounceSaveNote(value) {
+  clearTimeout(_noteDebounce)
+  _noteDebounce = setTimeout(() => {
+    if (_modalSessionId && ws && ws.readyState === 1)
+      ws.send(JSON.stringify({type:'save_note', session_id: _modalSessionId, note: value}))
+  }, 500)
+}
+
+function drawModalGraph(canvas, vals, warnV, critV) {
+  if (!canvas) return;
+  const W = canvas.offsetWidth || 560, H = canvas.offsetHeight || 90;
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, W, H);
+  const valid = vals.filter(v => v !== null);
+  if (!valid.length) return;
+  const maxV = Math.max(...valid, critV) + 10;
+  const n = vals.length, step = W / Math.max(n, 1), pad = 6;
+  const yFor = v => H - Math.round((v / maxV) * (H - pad * 2)) - pad;
+  const lastV = valid[valid.length - 1];
+  const col = lastV >= critV ? '#ef4444' : lastV >= warnV ? '#f59e0b' : '#22c55e';
+  const rgb = lastV >= critV ? '239,68,68' : lastV >= warnV ? '245,158,11' : '34,197,94';
+  const pts = vals.map((v, i) => ({ x: i * step + step / 2, y: v !== null ? yFor(v) : H, v }));
+  ctx.beginPath(); ctx.moveTo(pts[0].x, H);
+  pts.forEach(({ x, y }) => ctx.lineTo(x, y));
+  ctx.lineTo(pts[pts.length - 1].x, H); ctx.closePath();
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, `rgba(${rgb},.25)`); g.addColorStop(1, `rgba(${rgb},0.02)`);
+  ctx.fillStyle = g; ctx.fill();
+  ctx.beginPath(); let first = true;
+  pts.forEach(({ x, y, v }) => { if (v === null) { first = true; return; } first ? ctx.moveTo(x, y) : ctx.lineTo(x, y); first = false; });
+  ctx.strokeStyle = col; ctx.lineWidth = 1.5; ctx.setLineDash([]); ctx.stroke();
 }

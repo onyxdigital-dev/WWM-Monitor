@@ -1,10 +1,10 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
-  --bg: #080808; --glass: rgba(255,255,255,0.055); --glass-hi: rgba(255,255,255,0.10);
+  --bg: #080808; --glass: rgba(255,255,255,0.07); --glass-hi: rgba(255,255,255,0.10);
   --border: rgba(255,255,255,0.09); --border-hi: rgba(255,255,255,0.22);
   --text: #f0f0f0; --muted: rgba(255,255,255,0.35); --muted2: rgba(255,255,255,0.55);
   --green: #22c55e; --yellow: #f59e0b; --red: #ef4444; --purple: #a855f7;
-  --radius: 18px; --blur: 20px;
+  --radius: 18px; --blur: 24px;
 }
 html { width:100%; height:100%; background:transparent !important; overflow:hidden; -webkit-app-region:drag; user-select:none; }
 body { width:100%; height:100%; background:transparent !important; overflow:hidden; margin:0; padding:0; }
@@ -36,10 +36,20 @@ body { width:100%; height:100%; background:transparent !important; overflow:hidd
   -webkit-backdrop-filter:blur(var(--blur));
   border:1px solid var(--border); border-radius:var(--radius);
   position:relative; overflow:hidden; transition:border-color .2s, background .2s;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.18),
+    inset 0 -1px 0 rgba(0,0,0,0.22),
+    0 8px 32px rgba(0,0,0,0.35);
 }
 .card::before {
   content:''; position:absolute; top:0; left:10%; right:10%; height:1px;
-  background:linear-gradient(90deg,transparent,rgba(255,255,255,0.28),transparent);
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,0.45),transparent);
+}
+.card::after {
+  content:''; position:absolute; top:-30px; left:-20px;
+  width:100px; height:100px;
+  background:radial-gradient(circle, rgba(255,255,255,0.04), transparent 65%);
+  border-radius:50%; pointer-events:none;
 }
 #app { display:flex; flex-direction:row; height:100vh; }
 
@@ -239,9 +249,11 @@ tbody td:first-child { color:var(--text); font-family:'Consolas',monospace; font
 .ping-ok   { color:white!important;   text-shadow:0 0 30px rgba(255,255,255,.2)!important; }
 .ping-warn { color:#f59e0b!important;  text-shadow:0 0 30px rgba(245,158,11,.4)!important; }
 .ping-crit { color:#ef4444!important;  text-shadow:0 0 30px rgba(239,68,68,.5)!important; }
-.orb { position:fixed; border-radius:50%; filter:blur(80px); pointer-events:none; z-index:-1; opacity:.18; }
-.orb1 { width:400px; height:400px; background:rgba(255,255,255,.06); top:-120px; left:-80px; }
-.orb2 { width:300px; height:300px; background:rgba(255,255,255,.04); bottom:0; right:80px; }
+/* Each subclass MUST declare opacity — no default set here intentionally */
+.orb { position:fixed; border-radius:50%; filter:blur(80px); pointer-events:none; z-index:-1; }
+.orb1 { width:400px; height:400px; background:rgba(255,255,255,.06); top:-120px; left:-80px; opacity:0.45; }
+.orb2 { width:300px; height:300px; background:rgba(255,255,255,.04); bottom:0; right:80px; opacity:0.40; }
+.orb3 { width:200px; height:200px; background:rgba(255,255,255,.035); filter:blur(60px); top:35%; left:38%; opacity:0.28; }
 @keyframes fadeIn { from{opacity:0;transform:translateY(5px)} to{opacity:1;transform:none} }
 .fade-in { animation:fadeIn .3s ease forwards; }
 .update-btn {
@@ -317,3 +329,20 @@ tbody td:first-child { color:var(--text); font-family:'Consolas',monospace; font
   border-radius:8px; padding:4px 10px;
   font-size:13px; font-weight:700; color:var(--green);
 }
+.ev-row { display:flex; align-items:center; gap:10px; padding:6px 0; border-bottom:1px solid rgba(255,255,255,.05); font-size:11px; }
+.ev-row:last-child { border-bottom:none; }
+.ev-time { color:var(--muted); white-space:nowrap; min-width:120px; }
+.ev-badge { padding:2px 7px; border-radius:4px; font-size:10px; font-weight:700; letter-spacing:.04em; white-space:nowrap; }
+.ev-sid { color:var(--muted); font-size:10px; }
+.modal-hidden { display:none !important; }
+.modal-visible { display:flex !important; position:fixed; inset:0; z-index:1000; background:rgba(0,0,0,.65); align-items:center; justify-content:center; }
+
+/* Traceroute hops */
+.hop-row { display:flex; align-items:center; gap:8px; padding:2px 0; }
+.hop-num { font-size:9px; font-weight:700; color:rgba(255,255,255,0.3); min-width:14px; text-align:right; }
+.hop-ip  { font-size:10px; font-family:'Consolas',monospace; color:rgba(255,255,255,0.6); }
+
+/* Range slider */
+input[type=range] { -webkit-appearance:none; appearance:none; height:4px; border-radius:2px; background:rgba(255,255,255,0.15); outline:none; cursor:pointer; }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; appearance:none; width:14px; height:14px; border-radius:50%; background:rgba(255,255,255,0.9); cursor:pointer; }
+
