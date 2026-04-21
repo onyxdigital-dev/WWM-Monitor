@@ -425,9 +425,7 @@ def ping_icmp(ip):
     return None
 
 def ping_once(ip, port=None):
-    """Use TCP ping for game server (port given), ICMP for router/DNS."""
-    if port:
-        return ping_tcp(ip, port)
+    """ICMP ping for all targets — closer to actual in-game latency than TCP connect."""
     return ping_icmp(ip)
 
 def get_hops(ip):

@@ -288,8 +288,9 @@ function renderSessionModal(sessRow, pings) {
   requestAnimationFrame(() => {
     const pingVals = pings.map(p => p.ping_ms > 0 ? p.ping_ms : null);
     const jitterVals = pings.map(p => p.jitter != null ? p.jitter : null);
-    drawModalGraph(document.getElementById('modal-ping-canvas'), pingVals, WARN, CRIT);
-    drawModalGraph(document.getElementById('modal-jitter-canvas'), jitterVals, 10, 20);
+    const timestamps = pings.map(p => p.ts || null);
+    drawModalGraph(document.getElementById('modal-ping-canvas'), pingVals, timestamps, WARN, CRIT);
+    drawModalGraph(document.getElementById('modal-jitter-canvas'), jitterVals, timestamps, 10, 20);
   });
   // Clear and request note
   const noteEl = document.getElementById('modal-note')
@@ -306,10 +307,10 @@ function debounceSaveNote(value) {
   }, 500)
 }
 
-function drawModalGraph(canvas, vals, warnV, critV) {
+function drawModalGraph(canvas, vals, timestamps, warnV, critV, hoverIdx) {
   if (!canvas) return;
   const W = canvas.offsetWidth || 560, H = canvas.offsetHeight || 90;
-  canvas.width = W; canvas.height = H;
+  if (!canvas._graphSized) { canvas.width = W; canvas.height = H; canvas._graphSized = true; }
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, W, H);
   const valid = vals.filter(v => v !== null);
@@ -330,4 +331,50 @@ function drawModalGraph(canvas, vals, warnV, critV) {
   ctx.beginPath(); let first = true;
   pts.forEach(({ x, y, v }) => { if (v === null) { first = true; return; } first ? ctx.moveTo(x, y) : ctx.lineTo(x, y); first = false; });
   ctx.strokeStyle = col; ctx.lineWidth = 1.5; ctx.setLineDash([]); ctx.stroke();
+
+  if (hoverIdx != null && hoverIdx >= 0 && hoverIdx < pts.length) {
+    const pt = pts[hoverIdx];
+    if (pt.v !== null) {
+      const ptCol = pt.v >= critV ? '#ef4444' : pt.v >= warnV ? '#f59e0b' : '#22c55e';
+      // vertical line
+      ctx.beginPath(); ctx.moveTo(pt.x, 0); ctx.lineTo(pt.x, H);
+      ctx.strokeStyle = 'rgba(255,255,255,.2)'; ctx.lineWidth = 1; ctx.setLineDash([3,3]); ctx.stroke();
+      ctx.setLineDash([]);
+      // dot
+      ctx.beginPath(); ctx.arc(pt.x, pt.y, 4, 0, Math.PI*2);
+      ctx.fillStyle = ptCol; ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,.6)'; ctx.lineWidth = 1.5; ctx.stroke();
+      // tooltip
+      const time = timestamps && timestamps[hoverIdx] ? new Date(timestamps[hoverIdx]).toLocaleTimeString('en-US',{hour12:false}) : '';
+      const label = pt.v + ' ms' + (time ? '  ' + time : '');
+      ctx.font = '700 10px sans-serif';
+      const tw = ctx.measureText(label).width;
+      const tx = Math.min(Math.max(pt.x - tw/2 - 6, 2), W - tw - 14);
+      const ty = pt.y > H/2 ? pt.y - 28 : pt.y + 10;
+      ctx.fillStyle = 'rgba(20,20,28,.88)';
+      ctx.beginPath(); ctx.roundRect(tx, ty, tw + 12, 18, 4); ctx.fill();
+      ctx.fillStyle = ptCol; ctx.fillText(label, tx + 6, ty + 12);
+    }
+  }
+
+  // store data for hover redraws
+  canvas._graphData = { vals, timestamps, warnV, critV };
+  if (!canvas._hoverBound) {
+    canvas._hoverBound = true;
+    canvas.addEventListener('mousemove', e => {
+      const d = canvas._graphData; if (!d) return;
+      const rect = canvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const W2 = canvas.width, n2 = d.vals.length;
+      const step2 = W2 / Math.max(n2, 1);
+      const idx = Math.max(0, Math.min(n2-1, Math.floor(mx / step2)));
+      canvas._graphSized = true;
+      drawModalGraph(canvas, d.vals, d.timestamps, d.warnV, d.critV, idx);
+    });
+    canvas.addEventListener('mouseleave', () => {
+      const d = canvas._graphData; if (!d) return;
+      canvas._graphSized = true;
+      drawModalGraph(canvas, d.vals, d.timestamps, d.warnV, d.critV);
+    });
+  }
 }
