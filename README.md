@@ -42,7 +42,8 @@ Live ping, jitter, packet loss, spike detection, server tracking & geo mapping �
 |---|---|
 | **Session Quality Score** | A–F grade derived from ping, jitter, and packet loss |
 | **Hourly Charts** | 24-hour ping and jitter trend over the day |
-| **Session History** | All past sessions with quality grade, avg ping, and duration |
+| **Session History** | All past sessions with quality grade, avg/min/max ping, loss, spikes, and duration |
+| **Session Detail** | Click any session card to open a detail modal with ping and jitter graphs — hover over either graph to see the exact timestamp and ms value at that point |
 | **Server Switch Log** | Every time WWM moves you to a new server, logged with timestamps |
 | **CSV Export** | Download your full ping history as a spreadsheet |
 
@@ -57,13 +58,25 @@ Live ping, jitter, packet loss, spike detection, server tracking & geo mapping �
 
 ## How It Works
 
-WWM Monitor detects the active **Where Winds Meet** process, reads the live game server IP from your TCP connections, and pings it every 2 seconds. No configuration needed — just launch both apps.
+WWM Monitor detects the active **Where Winds Meet** process, reads the live game server IP from your TCP connections, and pings it every 2 seconds using ICMP — the same method as the Windows `ping` command — so the latency you see matches what the game actually experiences.
 
 ```
 Launch WWM Monitor → Start Where Winds Meet → Done
 ```
 
 The app sits in your **system tray** and keeps running in the background. It reconnects automatically when you start a new session or switch servers.
+
+---
+
+## Data Persistence
+
+All session history (ping data, jitter, events) is stored in a SQLite database at:
+
+```
+%APPDATA%\WWM Monitor\wwm_ping.db
+```
+
+This location is never touched by the installer, so **your data is preserved across app updates**.
 
 ---
 
@@ -91,6 +104,22 @@ The app sits in your **system tray** and keeps running in the background. It rec
 **Overlay**
 - **Overlay Hotkey** — keyboard shortcut to show/hide the overlay
 - **Show Jitter / Loss / Sparkline** — toggle individual overlay columns
+
+---
+
+## Changelog
+
+### v1.3.2
+- Session history database now stored in `%APPDATA%\WWM Monitor\` — data is no longer wiped on app updates
+
+### v1.3.1
+- Switched game server ping from TCP connect to ICMP for more accurate latency readings (closer to actual in-game experience)
+- Session detail modal graphs now show hover tooltips with timestamp and ms value
+
+### v1.3.0
+- Session detail modal with ping and jitter graphs
+- Session notes
+- Hourly trend charts on Dashboard
 
 ---
 
