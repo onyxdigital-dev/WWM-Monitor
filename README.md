@@ -5,7 +5,8 @@
 # WWM Monitor
 
 **Real-time network monitor for Where Winds Meet**  
-Live ping, jitter, packet loss, spike detection, server tracking & geo mapping — all in one overlay app.
+Live ping, jitter, packet loss, spike detection, server tracking & geo mapping — all in one overlay app.  
+Extremely lightweight — runs quietly in the background with near-zero CPU and memory impact on your game.
 
 [![Latest Release](https://img.shields.io/github/v/release/onyxdigital-dev/WWM-Monitor?style=flat-square&color=22c55e&label=Download)](https://github.com/onyxdigital-dev/WWM-Monitor/releases/latest)
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-blue?style=flat-square)]()
