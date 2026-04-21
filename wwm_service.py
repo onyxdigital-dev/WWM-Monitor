@@ -1,13 +1,18 @@
 # pip install websockets psutil requests
-import asyncio, websockets, json, threading, time, sqlite3, re, subprocess, requests, psutil, socket
+import asyncio, websockets, json, threading, time, sqlite3, re, subprocess, requests, psutil, socket, os, sys
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 from collections import deque
 
 WARN_MS=80; CRIT_MS=150; INTERVAL=2; SPIKE_THRESH=10; HISTORY=50
-DB_FILE="wwm_ping.db"
 DB_RETENTION_DAYS=30
-LOG_FILE=f"ping_wwm_{datetime.now().strftime('%Y%m%d')}.log"
+
+# --data-dir passed by Electron so the DB survives app updates
+_data_dir_idx = sys.argv.index('--data-dir') + 1 if '--data-dir' in sys.argv else None
+_data_dir = sys.argv[_data_dir_idx] if _data_dir_idx else os.path.dirname(os.path.abspath(__file__))
+os.makedirs(_data_dir, exist_ok=True)
+DB_FILE = os.path.join(_data_dir, 'wwm_ping.db')
+LOG_FILE = os.path.join(_data_dir, f"ping_wwm_{datetime.now().strftime('%Y%m%d')}.log")
 GAME_EXES=["wwm.exe","wherewsindsmeet.exe","where winds meet-win64-shipping.exe","wherewındsmeet-win64-shipping.exe"]
 
 # Ports that belong to the real WWM game servers (not CDN/auth/analytics)

@@ -1,6 +1,6 @@
 {
   "name": "wwm-monitor",
-  "version": "1.3.1",
+  "version": "1.3.2",
   "description": "WWM Ping Monitor",
   "author": "Onyx Digital",
   "main": "main.js",

@@ -140,7 +140,10 @@ function startBackend() {
     ? path.join(process.resourcesPath, 'wwm_service.exe')
     : null
   const cmd  = (exe && fs.existsSync(exe)) ? exe : 'python'
-  const args = (exe && fs.existsSync(exe)) ? [] : [path.join(__dirname, 'wwm_service.py')]
+  const dataDir = app.getPath('userData')
+  const args = (exe && fs.existsSync(exe))
+    ? ['--data-dir', dataDir]
+    : [path.join(__dirname, 'wwm_service.py'), '--data-dir', dataDir]
   const cwd  = app.isPackaged ? process.resourcesPath : __dirname
 
   backend = spawn(cmd, args, { stdio: ['ignore','pipe','pipe'], windowsHide: true, cwd })
